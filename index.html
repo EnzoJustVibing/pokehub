@@ -1029,10 +1029,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Background caught</label>
+        <label class="form-label">Background photo</label>
         <select class="form-select" id="raid-background">
-          <option value="no">No</option>
-          <option value="yes">Yes</option>
+          <option value="na">N/A — not available</option>
+          <option value="got">✓ Got it</option>
+          <option value="missed">✕ Available but missed</option>
         </select>
       </div>
       <div class="form-group">
@@ -1996,7 +1997,7 @@ function saveRaid() {
     result: document.getElementById('raid-result').value,
     caught: document.getElementById('raid-caught').value === 'yes',
     shiny: document.getElementById('raid-shiny').value === 'yes',
-    background: document.getElementById('raid-background').value === 'yes',
+    background: document.getElementById('raid-background').value,
     hundo: document.getElementById('raid-hundo').value === 'yes',
     notes: document.getElementById('raid-notes').value
   };
@@ -2030,7 +2031,9 @@ function editRaid(id) {
   document.getElementById('raid-result').value = r.result || 'Win';
   document.getElementById('raid-caught').value = r.caught ? 'yes' : 'no';
   document.getElementById('raid-shiny').value = r.shiny ? 'yes' : 'no';
-  document.getElementById('raid-background').value = r.background ? 'yes' : 'no';
+  // Backward compat: old boolean true → 'got', false/undefined → 'na'
+  const bgVal = r.background === true ? 'got' : r.background === false ? 'na' : (r.background || 'na');
+  document.getElementById('raid-background').value = bgVal;
   document.getElementById('raid-hundo').value = r.hundo ? 'yes' : 'no';
   document.getElementById('raid-notes').value = r.notes || '';
   document.getElementById('modal-raid').classList.add('open');
@@ -2043,6 +2046,8 @@ function deleteRaid(id) {
 
 function renderRaids() {
   if (!DB.raids) DB.raids = [];
+  // Normalize background field: old boolean true→'got', false→'na', string passthrough
+  const bgVal = r => r.background === true ? 'got' : r.background === false ? 'na' : (r.background || 'na');
 
   // Populate filter account dropdown
   const acctFilter = document.getElementById('raid-filter-account');
@@ -2068,8 +2073,9 @@ function renderRaids() {
   const totalRaids     = all.length;
   const totalWins      = countWhere(all, r => r.result === 'Win');
   const totalShinies   = countWhere(all, r => r.shiny);
-  const totalHundos    = countWhere(all, r => r.hundo);
-  const totalBackground = countWhere(all, r => r.background);
+  const totalHundos      = countWhere(all, r => r.hundo);
+  const totalBgAvailable = countWhere(all, r => bgVal(r) === 'got' || bgVal(r) === 'missed');
+  const totalBgGot       = countWhere(all, r => bgVal(r) === 'got');
   const shinyRate      = totalWins > 0 ? ((totalShinies/totalWins)*100).toFixed(1) : null;
 
   document.getElementById('raid-stats').innerHTML = `
@@ -2077,7 +2083,7 @@ function renderRaids() {
     <div class="stat-card"><div class="stat-label">Wins</div><div class="stat-value green">${totalWins}</div></div>
     <div class="stat-card"><div class="stat-label">Shinies</div><div class="stat-value gold">${totalShinies}</div></div>
     <div class="stat-card"><div class="stat-label">Hundos 💯</div><div class="stat-value purple">${totalHundos}</div></div>
-    <div class="stat-card"><div class="stat-label">Background</div><div class="stat-value teal">${totalBackground}</div></div>
+    <div class="stat-card"><div class="stat-label">Backgrounds</div><div class="stat-value teal">${totalBgGot}<span style="font-size:12px;color:var(--text3)"> / ${totalBgAvailable} avail</span></div></div>
     ${shinyRate ? `<div class="stat-card"><div class="stat-label">Shiny rate</div><div class="stat-value">${shinyRate}%</div></div>` : ''}
   `;
 
@@ -2097,7 +2103,7 @@ function renderRaids() {
           <td><span class="badge ${r.result==='Win'?'green':'red'}">${r.result||''}</span></td>
           <td>${r.caught ? '<span class="badge blue">✓</span>' : '<span style="color:var(--text3)">—</span>'}</td>
           <td>${r.shiny ? '<span class="badge gold">★</span>' : '<span style="color:var(--text3)">—</span>'}</td>
-          <td>${r.background ? '<span class="badge teal">✓</span>' : '<span style="color:var(--text3)">—</span>'}</td>
+          <td>${bgVal(r) === 'got' ? '<span class="badge teal">✓ Got</span>' : bgVal(r) === 'missed' ? '<span class="badge red">✕ Missed</span>' : '<span style="color:var(--text3)">—</span>'}</td>
           <td>${r.hundo ? '<span class="badge purple">💯</span>' : '<span style="color:var(--text3)">—</span>'}</td>
           <td style="color:var(--text2);font-size:12px;">${r.notes||''}</td>
           <td style="display:flex;gap:4px;">
@@ -3070,6 +3076,9 @@ function renderAnalyticsRaids(qOpts, dateLabel) {
   const remotes  = countWhere(raids, r => r.passType === 'remote');
   const winRate  = raids.length ? ((wins/raids.length)*100).toFixed(1) : 0;
   const shinyRate = wins > 0 ? ((shinies/wins)*100).toFixed(1) : 0;
+  const anBgVal  = r => r.background === true ? 'got' : r.background === false ? 'na' : (r.background || 'na');
+  const bgAvail  = countWhere(raids, r => anBgVal(r) === 'got' || anBgVal(r) === 'missed');
+  const bgGot    = countWhere(raids, r => anBgVal(r) === 'got');
 
   // Overall cost
   const overallCost = getRaidsCost(raids);
@@ -3086,6 +3095,7 @@ function renderAnalyticsRaids(qOpts, dateLabel) {
     { label: 'Hundos',       val: hundos,                                                              color: 'purple' },
     { label: 'Remote used',  val: remotes,                                                             color: 'teal'   },
     { label: 'Shiny rate',   val: `${shinyRate}%`,                                                    color: 'gold'   },
+    ...(bgAvail > 0 ? [{ label: 'Backgrounds', val: `${bgGot}/${bgAvail}`, color: 'teal' }] : []),
     ...(hasCostData ? [
       { label: 'Total coins',  val: Math.round(overallCost.totalCoins).toLocaleString() + ' 🪙',      color: 'gold'   },
       { label: 'Total INR',    val: '₹' + Math.round(overallCost.totalINR).toLocaleString(),          color: 'teal'   },
@@ -4008,10 +4018,12 @@ function renderSyncConfig() {
   }
 
   function raidsSheets() {
+    const bgStr = r => r.background === true ? 'Got' : r.background === false ? 'N/A'
+      : r.background === 'got' ? 'Got' : r.background === 'missed' ? 'Missed' : 'N/A';
     const rows = [...(DB.raids||[])].sort((a,b)=>a.date>b.date?1:-1).map(r => [
       r.date||'', r.account||'', r.boss||'', r.tier||'', r.passType||'',
       r.result||'', r.caught?'Yes':'No', r.shiny?'Yes':'No',
-      r.background?'Yes':'No', r.hundo?'Yes':'No', r.notes||''
+      bgStr(r), r.hundo?'Yes':'No', r.notes||''
     ]);
     return [{ name: 'Raids', headers: ['Date','Account','Boss','Tier','Pass Type','Result','Caught','Shiny','Background','Hundo','Notes'], rows }];
   }
