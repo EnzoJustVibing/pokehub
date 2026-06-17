@@ -244,6 +244,34 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .ev-bonus-tag { display:inline-block; padding:2px 7px; border-radius:99px; font-size:10px; background:var(--bg4); color:var(--text3); border:1px solid var(--border); }
 .ev-bonus-toggle { padding:4px 10px; border-radius:99px; border:1px solid var(--border); background:transparent; color:var(--text3); font-size:11px; cursor:pointer; transition:all 0.15s; }
 .ev-bonus-toggle.active { background:var(--blue-bg); color:var(--blue); border-color:rgba(79,142,247,0.3); }
+/* DASHBOARD */
+.dash-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+.dash-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:14px; }
+.dash-hero { background:linear-gradient(135deg,var(--bg2) 0%,var(--bg3) 100%); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; margin-bottom:14px; }
+.dash-hero-level { font-size:48px; font-weight:800; color:var(--blue); line-height:1; }
+.dash-hero-name { font-size:13px; color:var(--text3); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px; }
+.dash-section-label { font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; margin-top:4px; }
+.dash-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px; }
+.dash-card-label { font-size:11px; color:var(--text3); margin-bottom:4px; }
+.dash-card-val { font-size:22px; font-weight:700; color:var(--text); line-height:1.1; }
+.dash-card-sub { font-size:11px; color:var(--text3); margin-top:4px; }
+.dash-card-sub .up { color:var(--green); }
+.dash-card-sub .down { color:var(--red); }
+.dash-quick-btns { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.dash-quick-btn { display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:var(--radius); border:1px solid var(--border); background:var(--bg2); color:var(--text2); font-size:13px; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+.dash-quick-btn:hover { border-color:var(--blue); color:var(--blue); background:var(--blue-bg); }
+.dash-quick-btn .icon { font-size:15px; }
+.dash-feed-entry { display:flex; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); align-items:flex-start; }
+.dash-feed-entry:last-child { border-bottom:none; }
+.dash-feed-icon { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+.dash-feed-text { flex:1; min-width:0; }
+.dash-feed-title { font-size:13px; color:var(--text); line-height:1.3; }
+.dash-feed-meta { font-size:11px; color:var(--text3); margin-top:2px; }
+.dash-alert { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:var(--radius); background:var(--blue-bg); border:1px solid rgba(79,142,247,0.25); font-size:12px; color:var(--text2); margin-bottom:8px; }
+.dash-alert .dash-alert-icon { font-size:16px; flex-shrink:0; }
+@media(max-width:600px){ .dash-grid,.dash-grid-3{ grid-template-columns:1fr 1fr; } }
+@media(max-width:400px){ .dash-grid,.dash-grid-3{ grid-template-columns:1fr; } }
+
 /* JOURNAL */
 .jnl-feed { display:flex; flex-direction:column; gap:0; }
 .jnl-entry { display:flex; gap:14px; padding:14px 0; border-bottom:1px solid var(--border); position:relative; }
@@ -292,7 +320,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
 <nav class="app-nav">
   <div class="nav-logo">Poké<span>Hub</span></div>
-  <button class="nav-btn active" onclick="showPage('dex')">Pokédex</button>
+  <button class="nav-btn active" onclick="showPage('home')">Home</button>
+  <button class="nav-btn" onclick="showPage('dex')">Pokédex</button>
   <button class="nav-btn" onclick="showPage('spending')">Spending</button>
   <button class="nav-btn" onclick="showPage('xp')">Trainer</button>
   <button class="nav-btn" onclick="showPage('raids')">Raids</button>
@@ -303,8 +332,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   <div id="sync-status" title="Gist sync" onclick="showPage('manage')" style="margin-left:auto;display:flex;align-items:center;gap:5px;cursor:pointer;padding:4px 8px;border-radius:var(--radius);font-size:11px;color:var(--text3);white-space:nowrap;"></div>
 </nav>
 
+<!-- ===================== HOME / DASHBOARD PAGE ===================== -->
+<div class="page active" id="page-home">
+  <div id="home-main"></div>
+</div>
+
 <!-- ===================== DEX PAGE ===================== -->
-<div class="page active" id="page-dex">
+<div class="page" id="page-dex">
   <div class="stats-grid" id="dex-stats"></div>
   <div class="dex-tabs" id="dex-tabs"></div>
   <div class="gen-row" id="gen-row"></div>
@@ -2710,13 +2744,14 @@ function confirmClear() {
 }
 
 // ===================== NAV =====================
-let currentPage = 'dex';
+let currentPage = 'home';
 function showPage(p) {
   document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
   document.getElementById('page-' + p).classList.add('active');
-  document.querySelectorAll('.nav-btn')[['dex','spending','xp','raids','events','journal','analytics','manage'].indexOf(p)].classList.add('active');
+  document.querySelectorAll('.nav-btn')[['home','dex','spending','xp','raids','events','journal','analytics','manage'].indexOf(p)].classList.add('active');
   currentPage = p;
+  if (p === 'home') renderDashboard();
   if (p === 'dex') renderDex();
   if (p === 'spending') renderSpending();
   if (p === 'xp') renderXP();
@@ -2727,7 +2762,7 @@ function showPage(p) {
   if (p === 'manage') renderManage();
 }
 
-function renderAll() { renderDex(); renderSpending(); renderXP(); renderRaids(); renderEvents(); renderManage(); }
+function renderAll() { renderDashboard(); renderDex(); renderSpending(); renderXP(); renderRaids(); renderEvents(); renderManage(); }
 
 // ===================== TOAST =====================
 function toast(msg) {
@@ -3368,7 +3403,176 @@ function deleteJournalEntry(id) {
 }
 
 
-// ===================== GIST SYNC =====================
+// ===================== DASHBOARD =====================
+function renderDashboard() {
+  const MAIN_ACCOUNT = 'Main';
+
+  // ---- Trainer stats ----
+  const snaps = [...(DB.xpSnapshots||[])].sort((a,b) =>
+    a.date !== b.date ? (a.date > b.date ? 1 : -1) : a.totalXp - b.totalXp
+  );
+  const latestSnap = snaps.length ? snaps[snaps.length-1] : null;
+  const totalXP  = latestSnap?.totalXp || DB.xpBase?.totalXp || 0;
+  const level    = getLevelForXP(totalXP);
+  const nextXP   = getXPForLevel(level + 1);
+  const prevXP   = getXPForLevel(level);
+  const inLvl    = totalXP - prevXP;
+  const lvlRange = nextXP - prevXP;
+  const pct      = level >= 80 ? 100 : Math.min(100, Math.round((inLvl / lvlRange) * 100));
+  const xpToNext = level < 80 ? nextXP - totalXP : 0;
+
+  // Daily avg from latest-per-day dedup
+  const latestPerDay = Object.values(
+    snaps.reduce((acc, s) => {
+      if (!acc[s.date] || s.totalXp > acc[s.date].totalXp) acc[s.date] = s;
+      return acc;
+    }, {})
+  ).sort((a,b) => a.date > b.date ? 1 : -1);
+  let dailyAvg = 0;
+  if (latestPerDay.length >= 2) {
+    const first = latestPerDay[0], last = latestPerDay[latestPerDay.length-1];
+    const days = (new Date(last.date) - new Date(first.date)) / 86400000;
+    dailyAvg = days > 0 ? Math.round((last.totalXp - first.totalXp) / days) : 0;
+  }
+  const daysToNext = dailyAvg > 0 && xpToNext > 0 ? Math.ceil(xpToNext / dailyAvg) : null;
+
+  const latestCaught = [...snaps].reverse().find(s => s.caught != null)?.caught ?? null;
+  const latestStops  = [...snaps].reverse().find(s => s.stops  != null)?.stops  ?? null;
+
+  // ---- Spending ----
+  const coinBalance = getAcctCoins(MAIN_ACCOUNT);
+  const totalUSD    = getTotalUSDSpent();
+
+  // ---- Raids ----
+  const allRaids   = DB.raids || [];
+  const recentRaids = [...allRaids].sort((a,b) => b.date > a.date ? 1 : -1).slice(0, 3);
+  const totalShinies = countWhere(allRaids, r => r.shiny);
+
+  // ---- Events ----
+  const recentEvent = [...(DB.events||[])].sort((a,b) => b.date > a.date ? 1 : -1)[0];
+
+  // ---- Journal feed (last 5 entries) ----
+  const feedEntries = buildJournalFeed().slice(0, 5);
+
+  // ---- Alerts ----
+  const alerts = [];
+  const daysSinceLog = latestSnap ? Math.floor((Date.now() - new Date(latestSnap.date + 'T12:00:00')) / 86400000) : null;
+  if (daysSinceLog !== null && daysSinceLog >= 3) {
+    alerts.push({ icon: '⭐', text: `No XP logged in ${daysSinceLog} days — tap to update`, action: "openModal('modal-xp-set')" });
+  }
+  if (coinBalance < 100 && coinBalance >= 0) {
+    alerts.push({ icon: '🪙', text: `Coin balance low: ${coinBalance} coins`, action: "showPage('spending')" });
+  }
+  if (daysToNext && daysToNext <= 7) {
+    alerts.push({ icon: '🎮', text: `Level ${level+1} in ~${daysToNext} day${daysToNext===1?'':'s'} at current pace!`, action: "showPage('xp')" });
+  }
+
+  // ---- Render ----
+  document.getElementById('home-main').innerHTML = `
+
+    ${alerts.length ? alerts.map(a => `
+      <div class="dash-alert" onclick="${a.action}" style="cursor:pointer;">
+        <span class="dash-alert-icon">${a.icon}</span>
+        <span>${a.text}</span>
+      </div>`).join('') : ''}
+
+    <!-- Hero: Level block -->
+    <div class="dash-hero" style="margin-bottom:14px;">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+        <div>
+          <div class="dash-hero-name">Trainer level</div>
+          <div class="dash-hero-level">${level}</div>
+          ${daysToNext ? `<div style="font-size:13px;color:var(--text2);margin-top:4px;">Level ${level+1} in <span style="color:var(--gold);font-weight:600;">~${daysToNext} day${daysToNext===1?'':'s'}</span></div>` : xpToNext ? `<div style="font-size:13px;color:var(--text2);margin-top:4px;">${xpToNext.toLocaleString()} XP to level ${level+1}</div>` : ''}
+        </div>
+        <div style="text-align:right;">
+          ${dailyAvg ? `<div style="font-size:22px;font-weight:700;color:var(--green);">${dailyAvg.toLocaleString()}</div><div style="font-size:11px;color:var(--text3);">XP / day avg</div>` : ''}
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:6px;">
+        <span>Level ${level} → ${level+1}</span>
+        <span>${pct}%</span>
+      </div>
+      <div class="xp-bar-wrap"><div class="xp-bar-fill" style="width:${pct}%"></div></div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;">${inLvl.toLocaleString()} / ${lvlRange.toLocaleString()} XP</div>
+    </div>
+
+    <!-- Quick log buttons -->
+    <div class="dash-quick-btns">
+      <button class="dash-quick-btn" onclick="openModal('modal-xp-set')"><span class="icon">⭐</span> Update stats</button>
+      <button class="dash-quick-btn" onclick="openModal('modal-raid')"><span class="icon">⚔️</span> Log raid</button>
+      <button class="dash-quick-btn" onclick="openModal('modal-event')"><span class="icon">📅</span> Log event</button>
+      <button class="dash-quick-btn" onclick="openModal('modal-journal')"><span class="icon">✏️</span> Add note</button>
+    </div>
+
+    <!-- Stats row -->
+    <div class="dash-section-label">Trainer</div>
+    <div class="dash-grid-3" style="margin-bottom:14px;">
+      <div class="dash-card" onclick="showPage('xp')" style="cursor:pointer;">
+        <div class="dash-card-label">Total XP</div>
+        <div class="dash-card-val" style="font-size:18px;">${totalXP.toLocaleString()}</div>
+        <div class="dash-card-sub">${latestSnap ? latestSnap.date : 'No data'}</div>
+      </div>
+      ${latestCaught !== null ? `<div class="dash-card" onclick="showPage('xp')" style="cursor:pointer;">
+        <div class="dash-card-label">Pokémon caught</div>
+        <div class="dash-card-val">${latestCaught.toLocaleString()}</div>
+      </div>` : ''}
+      ${latestStops !== null ? `<div class="dash-card" onclick="showPage('xp')" style="cursor:pointer;">
+        <div class="dash-card-label">PokéStops visited</div>
+        <div class="dash-card-val">${latestStops.toLocaleString()}</div>
+      </div>` : ''}
+    </div>
+
+    <!-- Spending + Raids row -->
+    <div class="dash-section-label">Spending & Raids</div>
+    <div class="dash-grid" style="margin-bottom:14px;">
+      <div class="dash-card" onclick="showPage('spending')" style="cursor:pointer;">
+        <div class="dash-card-label">Coin balance · ${MAIN_ACCOUNT}</div>
+        <div class="dash-card-val" style="color:${coinBalance < 100 ? 'var(--red)' : 'var(--gold)'};">${coinBalance.toLocaleString()}</div>
+        <div class="dash-card-sub">$${totalUSD.toFixed(2)} spent on gift cards</div>
+      </div>
+      <div class="dash-card" onclick="showPage('raids')" style="cursor:pointer;">
+        <div class="dash-card-label">Raids logged</div>
+        <div class="dash-card-val">${allRaids.length.toLocaleString()}</div>
+        <div class="dash-card-sub"><span class="up">★ ${totalShinies} shine${totalShinies!==1?'s':''}</span></div>
+      </div>
+    </div>
+
+    <!-- Recent event -->
+    ${recentEvent ? `
+    <div class="dash-section-label">Latest event</div>
+    <div class="dash-card" onclick="showPage('events')" style="cursor:pointer;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--text);">${recentEvent.name}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px;">${recentEvent.date}${recentEvent.type ? ' · '+recentEvent.type : ''}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${recentEvent.shinies ? `<span class="badge gold">★ ${recentEvent.shinies}</span>` : ''}
+          ${recentEvent.caught  ? `<span class="badge blue">● ${recentEvent.caught}</span>` : ''}
+          ${recentEvent.xp     ? `<span class="badge purple">+${recentEvent.xp.toLocaleString()} XP</span>` : ''}
+        </div>
+      </div>
+    </div>` : ''}
+
+    <!-- Recent journal feed -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div class="dash-section-label" style="margin-bottom:0;">Recent highlights</div>
+      <button class="btn sm" onclick="showPage('journal')" style="font-size:11px;">View all</button>
+    </div>
+    <div class="dash-card" style="margin-bottom:14px;">
+      ${feedEntries.length ? feedEntries.map(e => `
+        <div class="dash-feed-entry">
+          <div class="dash-feed-icon" style="background:${e.iconBg};color:${e.iconColor};">${e.icon}</div>
+          <div class="dash-feed-text">
+            <div class="dash-feed-title">${e.title}</div>
+            <div class="dash-feed-meta">${e.date}${e.meta ? ' · '+e.meta : ''}</div>
+          </div>
+        </div>`).join('') : `<div style="color:var(--text3);font-size:13px;">Log raids, XP snapshots, and events to see highlights here.</div>`}
+    </div>
+  `;
+}
+
+
 // Config stored separately in localStorage (never exported/imported with DB data)
 const SYNC_KEY = 'pokehub_sync_config';
 
