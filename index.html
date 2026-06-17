@@ -3224,7 +3224,12 @@ function genXPEntries() {
   const snaps = [...(DB.xpSnapshots||[])].sort((a,b) => a.date > b.date ? 1 : -1);
   if (!snaps.length) return entries;
 
-  let prevLevel = null;
+  // Seed from xpStarting so we don't backfill milestones the user hit before logging
+  const xpBase = DB.xpStarting || 0;
+
+  // Level-up crossings — only between consecutive snapshots (not from 0)
+  // prevLevel starts at whatever level xpStarting implies
+  let prevLevel = xpBase > 0 ? getLevelForXP(xpBase) : null;
   snaps.forEach(s => {
     const lvl = getLevelForXP(s.totalXp);
     if (prevLevel !== null && lvl > prevLevel) {
@@ -3238,9 +3243,13 @@ function genXPEntries() {
     prevLevel = lvl;
   });
 
+  // XP milestones — only fire when crossed between snapshots, not on first entry
   const XP_MILESTONES = [1e6,5e6,10e6,25e6,50e6,75e6,100e6,150e6,200e6];
-  let prevXP = 0;
-  snaps.forEach(s => {
+  // prevXP starts at xpStarting (or first snap if no baseline set)
+  let prevXP = xpBase > 0 ? xpBase : snaps[0].totalXp;
+  snaps.forEach((s, i) => {
+    // Skip the first snapshot if no baseline — nothing to compare against
+    if (i === 0 && xpBase === 0) { prevXP = s.totalXp; return; }
     XP_MILESTONES.forEach(m => {
       if (prevXP < m && s.totalXp >= m) {
         const label = m >= 1e6 ? (m/1e6)+'M' : (m/1e3)+'K';
