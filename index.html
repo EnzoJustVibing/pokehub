@@ -679,6 +679,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
           style="width:110px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;color:var(--text);font-size:13px;"
           oninput="setTrainerStarting('stops', this.value)">
       </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);">
+        Distance walked (km)
+        <input type="number" id="trainer-start-km" min="0" placeholder="0" step="0.1"
+          style="width:110px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;color:var(--text);font-size:13px;"
+          oninput="setTrainerStarting('km', this.value)">
+      </label>
       <span style="font-size:12px;color:var(--text3);">Your totals before you started logging — so the first entry shows the right delta</span>
     </div>
     <div id="accounts-list"></div>
@@ -869,6 +875,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
       <div class="form-group">
         <label class="form-label">PokéStops visited</label>
         <input class="form-input" type="number" id="set-stops" placeholder="e.g. 124,805">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Distance walked (km)</label>
+        <input class="form-input" type="number" id="set-km" placeholder="e.g. 4,821.3" step="0.1">
       </div>
     </div>
     <div id="xp-set-preview" style="font-size:12px;color:var(--text2);margin-bottom:8px;min-height:18px;"></div>
@@ -1111,7 +1121,7 @@ let DB = {
   xpLog: [],                // legacy
   xpBase: { level: 1, totalXp: 0, setAt: Date.now() },
   xpSnapshots: [],          // [{ id, date, totalXp, caught?, stops?, savedAt? }]
-  trainerStarting: { caught: 0, stops: 0 }, // baseline before first log
+  trainerStarting: { caught: 0, stops: 0, km: 0 }, // baseline before first log
   xpStarting: 0,            // XP total before first snapshot log
   events: [],               // [{ id, name, date, account, coins, shinies, caught, xp, notes }]
   raids: [],                // [{ id, date, account, boss, tier, passType, result, shiny, notes }]
@@ -1746,6 +1756,7 @@ function renderXP() {
   // Only include snapshots that have the relevant field
   const caughtSnaps = snapsDesc.filter(s => s.caught != null);
   const stopsSnaps  = snapsDesc.filter(s => s.stops  != null);
+  const kmSnaps     = snapsDesc.filter(s => s.km     != null);
   const ts = DB.trainerStarting || {};
 
   // Helper: build a mini stat history section for caught / stops
@@ -1782,6 +1793,15 @@ function renderXP() {
   // Latest caught / stops for stat cards
   const latestCaught = caughtSnaps[0]?.caught || null;
   const latestStops  = stopsSnaps[0]?.stops   || null;
+  const latestKm     = kmSnaps[0]?.km         || null;
+
+  const kmPerDay = (() => {
+    const lpd = Object.values(kmSnaps.reduce((acc,s) => { if(!acc[s.date]||s.km>acc[s.date].km) acc[s.date]=s; return acc; },{}))
+      .sort((a,b) => a.date > b.date ? 1 : -1);
+    if (lpd.length < 2) return 0;
+    const gap = (new Date(lpd[lpd.length-1].date) - new Date(lpd[0].date)) / 86400000;
+    return gap > 0 ? ((lpd[lpd.length-1].km - lpd[0].km) / gap).toFixed(1) : 0;
+  })();
 
   // Daily avg for caught
   const caughtPerDay = (() => {
@@ -1813,6 +1833,8 @@ function renderXP() {
       ${caughtPerDay ? `<div class="stat-card"><div class="stat-label">Caught / day</div><div class="stat-value green">${caughtPerDay.toLocaleString()}</div></div>` : ''}
       ${latestStops !== null ? `<div class="stat-card"><div class="stat-label">PokéStops visited</div><div class="stat-value teal">${latestStops.toLocaleString()}</div></div>` : ''}
       ${stopsPerDay ? `<div class="stat-card"><div class="stat-label">Stops / day</div><div class="stat-value green">${stopsPerDay.toLocaleString()}</div></div>` : ''}
+      ${latestKm !== null ? `<div class="stat-card"><div class="stat-label">Distance walked</div><div class="stat-value purple">${parseFloat(latestKm).toLocaleString()} km</div></div>` : ''}
+      ${kmPerDay ? `<div class="stat-card"><div class="stat-label">km / day</div><div class="stat-value green">${kmPerDay}</div></div>` : ''}
     </div>
     <div class="card" style="margin-bottom:14px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
@@ -1835,7 +1857,7 @@ function renderXP() {
         <tbody>${snapRows}</tbody>
       </table>` : `<div style="color:var(--text3);font-size:13px;">No XP recorded yet.</div>`}
     </div>
-    ${caughtSnaps.length || stopsSnaps.length ? `
+    ${caughtSnaps.length || stopsSnaps.length || kmSnaps.length ? `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
       <div class="card">
         <div class="manage-title" style="margin-bottom:12px;">Pokémon caught</div>
@@ -1845,7 +1867,11 @@ function renderXP() {
         <div class="manage-title" style="margin-bottom:12px;">PokéStops visited</div>
         ${trainerStatRows(stopsSnaps, 'stops', 'Stops', 'teal')}
       </div>
-    </div>` : ''}
+    </div>
+    ${kmSnaps.length ? `<div class="card" style="margin-bottom:14px;">
+      <div class="manage-title" style="margin-bottom:12px;">Distance walked</div>
+      ${trainerStatRows(kmSnaps, 'km', 'km', 'purple')}
+    </div>` : ''}` : ''}
   `;
 }
 
@@ -2240,6 +2266,7 @@ function renderManage() {
   document.getElementById('trainer-start-xp').value    = DB.xpStarting || '';
   document.getElementById('trainer-start-caught').value = ts.caught || '';
   document.getElementById('trainer-start-stops').value  = ts.stops  || '';
+  document.getElementById('trainer-start-km').value     = ts.km     || '';
   // Sync config
   renderSyncConfig();
 }
@@ -2533,21 +2560,23 @@ function updateXPPreview() {
 }
 
 function setCurrentXP() {
-  const xp     = parseInt(document.getElementById('set-xp').value)     || null;
-  const caught = parseInt(document.getElementById('set-caught').value) || null;
-  const stops  = parseInt(document.getElementById('set-stops').value)  || null;
+  const xp     = parseInt(document.getElementById('set-xp').value)         || null;
+  const caught = parseInt(document.getElementById('set-caught').value)     || null;
+  const stops  = parseInt(document.getElementById('set-stops').value)      || null;
+  const km     = parseFloat(document.getElementById('set-km').value)       || null;
   const date   = document.getElementById('set-date').value;
   const editId = document.getElementById('xp-edit-id').value;
 
-  if (!xp && !caught && !stops) { toast('Enter at least one stat'); return; }
+  if (!xp && !caught && !stops && !km) { toast('Enter at least one stat'); return; }
   if (!DB.xpSnapshots) DB.xpSnapshots = [];
 
   const entry = {
     id: editId || uid(),
     date: date || new Date().toISOString().split('T')[0],
-    ...(xp     !== null ? { totalXp: xp }     : {}),
-    ...(caught  !== null ? { caught }           : {}),
-    ...(stops   !== null ? { stops }            : {}),
+    ...(xp     !== null ? { totalXp: xp } : {}),
+    ...(caught  !== null ? { caught }      : {}),
+    ...(stops   !== null ? { stops }       : {}),
+    ...(km      !== null ? { km }          : {}),
     ...(editId  ? {} : { savedAt: Date.now() }),
   };
 
@@ -2563,7 +2592,7 @@ function setCurrentXP() {
 
   if (xp) DB.xpBase = { level: getLevelForXP(xp), totalXp: xp, setAt: Date.now() };
   saveDB(); closeModal('modal-xp-set'); renderXP();
-  ['set-xp','set-caught','set-stops','set-date','xp-set-preview','xp-edit-id'].forEach(f => {
+  ['set-xp','set-caught','set-stops','set-km','set-date','xp-set-preview','xp-edit-id'].forEach(f => {
     const el = document.getElementById(f); if (el) el.value = '';
   });
   document.getElementById('xp-set-preview').textContent = '';
@@ -2579,6 +2608,7 @@ function editXPSnapshot(id) {
   document.getElementById('set-xp').value       = s.totalXp  || '';
   document.getElementById('set-caught').value   = s.caught   || '';
   document.getElementById('set-stops').value    = s.stops    || '';
+  document.getElementById('set-km').value       = s.km       || '';
   document.getElementById('xp-set-preview').textContent = '';
   document.getElementById('modal-xp-set').classList.add('open');
 }
@@ -3241,6 +3271,33 @@ function genXPEntries() {
       title: `Best XP day: <span class="jnl-pokemon">${bestRate.toLocaleString()} XP/day</span>`,
       meta: 'Personal best rate', sourceId: bestSnap.id });
   }
+
+  // Best day for caught / stops / km — same latestPerDay pattern per field
+  function bestDayForField(field, label, icon, iconBg, iconColor) {
+    const fieldSnaps = snaps.filter(s => s[field] != null);
+    const lpd = Object.values(fieldSnaps.reduce((acc,s) => {
+      if (!acc[s.date] || s[field] > acc[s.date][field]) acc[s.date] = s; return acc;
+    }, {})).sort((a,b) => a.date > b.date ? 1 : -1);
+    let best = 0, bDate = null, bSnap = null;
+    for (let i = 1; i < lpd.length; i++) {
+      const gap = (new Date(lpd[i].date) - new Date(lpd[i-1].date)) / 86400000;
+      if (gap > 0) {
+        const delta = (lpd[i][field] - lpd[i-1][field]) / gap;
+        if (delta > best) { best = delta; bDate = lpd[i].date; bSnap = lpd[i]; }
+      }
+    }
+    if (best > 0 && bSnap) {
+      const display = field === 'km' ? best.toFixed(1) : Math.round(best).toLocaleString();
+      entries.push({ date: bDate, type: 'milestone', tag: 'milestone',
+        icon, iconBg, iconColor,
+        title: `Most ${label} in a day: <span class="jnl-pokemon">${display}</span>`,
+        meta: 'Personal best', sourceId: bSnap.id });
+    }
+  }
+  bestDayForField('caught', 'Pokémon caught', '🎯', 'var(--blue-bg)',   'var(--blue)');
+  bestDayForField('stops',  'PokéStops spun', '🔵', 'var(--teal-bg)',   'var(--teal)');
+  bestDayForField('km',     'km walked',       '👟', 'var(--purple-bg)', 'var(--purple)');
+
   return entries;
 }
 
