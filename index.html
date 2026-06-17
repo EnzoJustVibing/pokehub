@@ -628,6 +628,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;padding:10px 12px;background:var(--bg3);border-radius:var(--radius);flex-wrap:wrap;">
       <span style="font-size:13px;color:var(--text);font-weight:500;white-space:nowrap;">Trainer starting values:</span>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);">
+        Total XP
+        <input type="number" id="trainer-start-xp" min="0" placeholder="0"
+          style="width:130px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;color:var(--text);font-size:13px;"
+          oninput="setXPStarting(this.value)">
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);">
         Pokémon caught
         <input type="number" id="trainer-start-caught" min="0" placeholder="0"
           style="width:110px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;color:var(--text);font-size:13px;"
@@ -1072,6 +1078,7 @@ let DB = {
   xpBase: { level: 1, totalXp: 0, setAt: Date.now() },
   xpSnapshots: [],          // [{ id, date, totalXp, caught?, stops?, savedAt? }]
   trainerStarting: { caught: 0, stops: 0 }, // baseline before first log
+  xpStarting: 0,            // XP total before first snapshot log
   events: [],               // [{ id, name, date, account, coins, shinies, caught, xp, notes }]
   raids: [],                // [{ id, date, account, boss, tier, passType, result, shiny, notes }]
   journal: [],              // [{ id, date, type, text, pokemon, emoji, notes }] — manual entries
@@ -1675,7 +1682,11 @@ function renderXP() {
   const snapRows = snapsDesc.map((s, i) => {
     // delta: always vs immediately previous entry (shows actual XP logged this session)
     const prevEntry = snapsDesc[i+1];
-    const delta = prevEntry ? s.totalXp - prevEntry.totalXp : null;
+    // For the oldest entry, compare against xpStarting baseline if set
+    const xpBase = DB.xpStarting || 0;
+    const deltaVal = prevEntry ? s.totalXp - prevEntry.totalXp
+                   : xpBase > 0 ? s.totalXp - xpBase : null;
+    const delta = deltaVal;
 
     // rate: find most recent snapshot from a strictly earlier date
     const prevDaySnap = snapsDesc.slice(i+1).find(p => p.date < s.date);
@@ -2192,6 +2203,7 @@ function renderManage() {
   document.getElementById('inr-starting-val').value = DB.inrStarting || '';
   // Trainer starting values
   const ts = DB.trainerStarting || {};
+  document.getElementById('trainer-start-xp').value    = DB.xpStarting || '';
   document.getElementById('trainer-start-caught').value = ts.caught || '';
   document.getElementById('trainer-start-stops').value  = ts.stops  || '';
   // Sync config
@@ -2647,6 +2659,11 @@ function deleteEvent(id) { DB.events = DB.events.filter(g=>g.id!==id); saveDB();
 function setINRStarting(val) {
   DB.inrStarting = parseFloat(val) || 0;
   saveDB(); renderSpending();
+}
+
+function setXPStarting(val) {
+  DB.xpStarting = parseInt(val) || 0;
+  saveDB(); renderXP();
 }
 
 function setTrainerStarting(field, val) {
