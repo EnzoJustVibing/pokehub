@@ -244,6 +244,35 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .ev-bonus-tag { display:inline-block; padding:2px 7px; border-radius:99px; font-size:10px; background:var(--bg4); color:var(--text3); border:1px solid var(--border); }
 .ev-bonus-toggle { padding:4px 10px; border-radius:99px; border:1px solid var(--border); background:transparent; color:var(--text3); font-size:11px; cursor:pointer; transition:all 0.15s; }
 .ev-bonus-toggle.active { background:var(--blue-bg); color:var(--blue); border-color:rgba(79,142,247,0.3); }
+/* MEDALS */
+.medals-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; }
+.medal-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px; display:flex; flex-direction:column; gap:8px; transition:border-color 0.15s; }
+.medal-card.platinum { border-color:rgba(167,139,250,0.5); background:var(--purple-bg); }
+.medal-card.gold     { border-color:rgba(245,166,35,0.4);  background:var(--gold-bg);   }
+.medal-card.silver   { border-color:rgba(180,180,200,0.4); }
+.medal-card.bronze   { border-color:rgba(180,120,60,0.3);  }
+.medal-name { font-size:13px; font-weight:600; color:var(--text); }
+.medal-task { font-size:11px; color:var(--text3); line-height:1.4; }
+.medal-tier { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:99px; }
+.medal-tier.platinum { background:var(--purple-bg); color:var(--purple); }
+.medal-tier.gold     { background:var(--gold-bg);   color:var(--gold);   }
+.medal-tier.silver   { background:var(--bg3);        color:#aaa;          }
+.medal-tier.bronze   { background:rgba(180,120,60,0.15); color:#c87941;   }
+.medal-tier.none     { background:var(--bg3); color:var(--text3); }
+.medal-progress { display:flex; flex-direction:column; gap:3px; }
+.medal-progress-bar { height:4px; background:var(--bg3); border-radius:99px; overflow:hidden; }
+.medal-progress-fill { height:100%; border-radius:99px; transition:width 0.3s; }
+.medal-progress-label { font-size:10px; color:var(--text3); display:flex; justify-content:space-between; }
+.medal-input { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius); padding:5px 8px; color:var(--text); font-size:12px; width:100%; }
+.medal-input:focus { outline:none; border-color:var(--blue); }
+.medal-auto-badge { font-size:10px; color:var(--teal); background:var(--teal-bg); padding:1px 6px; border-radius:99px; display:inline-block; margin-left:4px; }
+@media(max-width:500px){ .medals-grid{ grid-template-columns:1fr 1fr; } }
+
+/* CONFIRM DELETE POPOVER */
+.confirm-pop { position:fixed; z-index:200; background:var(--bg2); border:1px solid var(--red); border-radius:var(--radius-lg); padding:12px 14px; box-shadow:0 8px 24px rgba(0,0,0,0.4); display:flex; flex-direction:column; gap:8px; min-width:180px; }
+.confirm-pop-msg { font-size:13px; color:var(--text); font-weight:500; }
+.confirm-pop-btns { display:flex; gap:6px; }
+
 /* DASHBOARD */
 .dash-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
 .dash-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:14px; }
@@ -324,6 +353,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   <button class="nav-btn" onclick="showPage('dex')">Pokédex</button>
   <button class="nav-btn" onclick="showPage('spending')">Spending</button>
   <button class="nav-btn" onclick="showPage('xp')">Trainer</button>
+  <button class="nav-btn" onclick="showPage('medals')">Medals</button>
   <button class="nav-btn" onclick="showPage('raids')">Raids</button>
   <button class="nav-btn" onclick="showPage('events')">Events</button>
   <button class="nav-btn" onclick="showPage('journal')">Journal</button>
@@ -427,6 +457,26 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <button class="btn primary" onclick="openModal('modal-xp-set')">+ Update stats</button>
   </div>
   <div id="xp-main"></div>
+</div>
+
+<!-- ===================== MEDALS PAGE ===================== -->
+<div class="page" id="page-medals">
+  <div class="section-header">
+    <div>
+      <div class="section-title">Medals</div>
+      <div class="section-subtitle" id="medals-subtitle"></div>
+    </div>
+  </div>
+  <div class="controls-row" style="margin-bottom:14px;">
+    <button class="filter-pill active" id="mf-all"       onclick="setMedalFilter('all',this)">All</button>
+    <button class="filter-pill"        id="mf-general"   onclick="setMedalFilter('general',this)">General</button>
+    <button class="filter-pill"        id="mf-type"      onclick="setMedalFilter('type',this)">Type</button>
+    <button class="filter-pill"        id="mf-platinum"  onclick="setMedalFilter('platinum',this)">🏆 Platinum</button>
+    <button class="filter-pill"        id="mf-gold"      onclick="setMedalFilter('gold',this)">🥇 Gold</button>
+    <button class="filter-pill"        id="mf-inprogress" onclick="setMedalFilter('inprogress',this)">In progress</button>
+    <input class="search-input" type="text" id="medals-search" placeholder="Search medals..." oninput="renderMedals()" style="max-width:200px;">
+  </div>
+  <div id="medals-grid"></div>
 </div>
 
 <!-- ===================== RAIDS PAGE ===================== -->
@@ -1084,6 +1134,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   </div>
 </div>
 
+<!-- Confirm delete popover (shared) -->
+<div class="confirm-pop" id="confirm-pop" style="display:none;">
+  <div class="confirm-pop-msg">Delete this entry?</div>
+  <div class="confirm-pop-btns">
+    <button class="btn sm danger" id="confirm-pop-yes">Delete</button>
+    <button class="btn sm" onclick="dismissConfirmPop()">Cancel</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1127,6 +1186,7 @@ let DB = {
   events: [],               // [{ id, name, date, account, coins, shinies, caught, xp, notes }]
   raids: [],                // [{ id, date, account, boss, tier, passType, result, shiny, notes }]
   journal: [],              // [{ id, date, type, text, pokemon, emoji, notes }] — manual entries
+  medalProgress: {},        // { medalKey: { value: number, tier: 'bronze'|'silver'|'gold'|'platinum' } }
 };
 
 function saveDB() {
@@ -1748,7 +1808,7 @@ function renderXP() {
       <td style="color:var(--text2)">${rate !== null ? rate.toLocaleString()+'/day' : '—'}</td>
       <td style="display:flex;gap:4px;">
         <button class="btn sm" onclick="editXPSnapshot('${s.id}')">✎</button>
-        <button class="btn sm danger" onclick="deleteXPSnapshot('${s.id}')">✕</button>
+        <button class="btn sm danger" onclick="deleteXPSnapshot('${s.id}', this)">✕</button>
       </td>
     </tr>`;
   }).join('');
@@ -1930,7 +1990,7 @@ function renderSpending() {
         <td style="color:var(--text2)">${s.notes||''}</td>
         <td style="display:flex;gap:4px;">
           <button class="btn sm" onclick="editCoinSpend('${s.id}')">✎</button>
-          <button class="btn sm danger" onclick="deleteCoinSpend('${s.id}')">✕</button>
+          <button class="btn sm danger" onclick="deleteCoinSpend('${s.id}', this)">✕</button>
         </td>
       </tr>`;}).join('')}</tbody>
     </table>` : `<div style="color:var(--text3);font-size:13px;padding:8px 0;">No coin spending logged for ${spendAcct}.</div>`;
@@ -1945,7 +2005,7 @@ function renderSpending() {
         <td><span class="badge blue">+${(c.coins||0).toLocaleString()}</span></td>
         <td><span class="badge gold">₹${(c.inr||0).toLocaleString()}</span></td>
         <td style="color:var(--text2)">${c.coins ? (c.inr/c.coins).toFixed(2) : ''}</td>
-        <td><button class="btn sm danger" onclick="deleteCoinPurchase('${c.id}')">✕</button></td>
+        <td><button class="btn sm danger" onclick="deleteCoinPurchase('${c.id}', this)">✕</button></td>
       </tr>`).join('')}</tbody>
     </table>` : `<div style="color:var(--text3);font-size:13px;padding:8px 0;">No coin purchases logged for ${spendAcct}.</div>`;
 
@@ -1958,7 +2018,7 @@ function renderSpending() {
         <td>${g.date}</td>
         <td><span class="badge green">+${(g.coins||0).toLocaleString()}</span></td>
         <td style="color:var(--text2)">${g.notes||''}</td>
-        <td><button class="btn sm danger" onclick="deleteGymCoins('${g.id}')">✕</button></td>
+        <td><button class="btn sm danger" onclick="deleteGymCoins('${g.id}', this)">✕</button></td>
       </tr>`).join('')}</tbody>
     </table>` : `<div style="color:var(--text3);font-size:13px;padding:8px 0;">No gym coins logged for ${spendAcct}.</div>`;
 
@@ -1973,7 +2033,7 @@ function renderSpending() {
         <td><span class="badge gold">₹${(g.inr||0).toLocaleString()}</span></td>
         <td style="color:var(--text2)">${g.usd && g.inr ? Math.round(g.inr/g.usd)+' INR/USD' : ''}</td>
         <td style="color:var(--text2)">${g.notes||''}</td>
-        <td><button class="btn sm danger" onclick="deleteGiftCard('${g.id}')">✕</button></td>
+        <td><button class="btn sm danger" onclick="deleteGiftCard('${g.id}', this)">✕</button></td>
       </tr>`).join('')}</tbody>
     </table>` : `<div style="color:var(--text3);font-size:13px;padding:8px 0;">No gift cards logged yet.</div>`;
 }
@@ -2039,9 +2099,11 @@ function editRaid(id) {
   document.getElementById('modal-raid').classList.add('open');
 }
 
-function deleteRaid(id) {
-  DB.raids = (DB.raids||[]).filter(r => r.id !== id);
-  saveDB(); renderRaids();
+function deleteRaid(id, el) {
+  confirmDelete(el, 'this raid', () => {
+    DB.raids = (DB.raids||[]).filter(r => r.id !== id);
+    saveDB(); renderRaids();
+  });
 }
 
 function renderRaids() {
@@ -2108,7 +2170,7 @@ function renderRaids() {
           <td style="color:var(--text2);font-size:12px;">${r.notes||''}</td>
           <td style="display:flex;gap:4px;">
             <button class="btn sm" onclick="editRaid('${r.id}')">✎</button>
-            <button class="btn sm danger" onclick="deleteRaid('${r.id}')">✕</button>
+            <button class="btn sm danger" onclick="deleteRaid('${r.id}', this)">✕</button>
           </td>
         </tr>`).join('')}</tbody>
       </table>
@@ -2210,7 +2272,7 @@ function renderEvents() {
         </div>
         <div style="display:flex;gap:4px;flex-shrink:0;">
           <button class="btn sm" onclick="editEvent('${e.id}')">✎</button>
-          <button class="btn sm danger" onclick="deleteEvent('${e.id}')">✕</button>
+          <button class="btn sm danger" onclick="deleteEvent('${e.id}', this)">✕</button>
         </div>
       </div>
       ${stats ? `<div class="ev-stats-row">${stats}</div>` : ''}
@@ -2619,9 +2681,11 @@ function editXPSnapshot(id) {
   document.getElementById('modal-xp-set').classList.add('open');
 }
 
-function deleteXPSnapshot(id) {
-  DB.xpSnapshots = (DB.xpSnapshots||[]).filter(s => s.id !== id);
-  saveDB(); renderXP();
+function deleteXPSnapshot(id, el) {
+  confirmDelete(el, 'this snapshot', () => {
+    DB.xpSnapshots = (DB.xpSnapshots||[]).filter(s => s.id !== id);
+    saveDB(); renderXP();
+  });
 }
 
 function saveEvent() {
@@ -2719,12 +2783,256 @@ function evPopulateModal() {
   }
 }
 
+// ===================== MEDALS =====================
+
+// Medal database sourced from Bulbapedia + Sportskeeda (June 2026)
+// tiers: [bronze, silver, gold, platinum] — null means no platinum
+// auto: key into a computed value (km, caught, stops) or raid win count
+const MEDALS = [
+  // ---- GENERAL ----
+  { key:'jogger',        name:'Jogger',              cat:'general', task:'Walk ___ km',                          tiers:[10,100,1000,10000],       auto:'km'      },
+  { key:'collector',     name:'Collector',            cat:'general', task:'Catch ___ Pokémon',                   tiers:[30,500,2000,50000],        auto:'caught'  },
+  { key:'backpacker',    name:'Backpacker',           cat:'general', task:'Visit ___ PokéStops',                 tiers:[10,1000,2000,50000],       auto:'stops'   },
+  { key:'sightseer',     name:'Sightseer',            cat:'general', task:'Visit ___ unique PokéStops',          tiers:[10,100,1000,2000]                         },
+  { key:'scientist',     name:'Scientist',            cat:'general', task:'Evolve ___ Pokémon',                  tiers:[3,20,200,2000]                            },
+  { key:'breeder',       name:'Breeder',              cat:'general', task:'Hatch ___ Eggs',                      tiers:[10,100,500,2500]                          },
+  { key:'fisher',        name:'Fisher',               cat:'general', task:'Catch ___ big Magikarp',              tiers:[3,50,300,1000]                            },
+  { key:'youngster',     name:'Youngster',            cat:'general', task:'Catch ___ tiny Rattata',              tiers:[3,50,300,1000]                            },
+  { key:'pikachu_fan',   name:'Pikachu Fan',          cat:'general', task:'Catch ___ Pikachu',                   tiers:[3,50,300,1000]                            },
+  { key:'unown',         name:'Unown',                cat:'general', task:'Catch ___ Unown',                     tiers:[3,10,26,28]                               },
+  { key:'battle_girl',   name:'Battle Girl',          cat:'general', task:'Win ___ Gym battles',                 tiers:[10,100,1000,4000]                         },
+  { key:'ace_trainer',   name:'Ace Trainer',          cat:'general', task:'Train ___ times in Trainer Battles',  tiers:[10,100,1000,null]                         },
+  { key:'champion',      name:'Champion',             cat:'general', task:'Win ___ raids',                       tiers:[10,100,1000,2000]                         },
+  { key:'battle_legend', name:'Battle Legend',        cat:'general', task:'Win ___ Legendary raids',             tiers:[10,100,1000,2000]                         },
+  { key:'berry_master',  name:'Berry Master',         cat:'general', task:'Feed ___ Berries at Gyms',            tiers:[10,100,1000,15000]                        },
+  { key:'gym_leader',    name:'Gym Leader',           cat:'general', task:'Defend Gyms for ___ hours',           tiers:[10,100,1000,15000]                        },
+  { key:'pokemon_ranger',name:'Pokémon Ranger',       cat:'general', task:'Complete ___ Field Research tasks',   tiers:[10,100,1000,2500]                         },
+  { key:'idol',          name:'Idol',                 cat:'general', task:'Become Best Friends with ___ Trainers',tiers:[1,2,3,20]                                },
+  { key:'gentleman',     name:'Gentleman',            cat:'general', task:'Trade ___ Pokémon',                   tiers:[10,100,1000,2500]                         },
+  { key:'pilot',         name:'Pilot',                cat:'general', task:'Earn ___ km from trades',             tiers:[1000,100000,1000000,10000000]              },
+  { key:'purifier',      name:'Purifier',             cat:'general', task:'Purify ___ Shadow Pokémon',           tiers:[5,50,500,1000]                            },
+  { key:'hero',          name:'Hero',                 cat:'general', task:'Defeat ___ Team GO Rocket members',   tiers:[10,100,1000,2000]                         },
+  { key:'ultra_hero',    name:'Ultra Hero',           cat:'general', task:'Defeat Giovanni ___ time(s)',         tiers:[1,5,20,50]                                },
+  { key:'best_buddy',    name:'Best Buddy',           cat:'general', task:'Have ___ Best Buddies',               tiers:[1,10,100,200]                             },
+  { key:'wayfarer',      name:'Wayfarer',             cat:'general', task:'Earn ___ Wayfarer Agreements',        tiers:[50,500,1000,1500]                         },
+  { key:'cameraman',     name:'Cameraman',            cat:'general', task:'Have ___ surprise encounters in GO Snapshot', tiers:[10,50,200,400]                    },
+  { key:'great_vet',     name:'Great League Veteran', cat:'general', task:'Win ___ Trainer Battles (Great League)', tiers:[5,50,200,1000]                         },
+  { key:'ultra_vet',     name:'Ultra League Veteran', cat:'general', task:'Win ___ Trainer Battles (Ultra League)', tiers:[5,50,200,1000]                         },
+  { key:'master_vet',    name:'Master League Veteran',cat:'general', task:'Win ___ Trainer Battles (Master League)', tiers:[5,50,200,1000]                        },
+  { key:'rising_star',   name:'Rising Star',          cat:'general', task:'Defeat ___ different species in raids', tiers:[2,10,50,150]                            },
+  { key:'rising_star_duo',name:'Rising Star Duo',     cat:'general', task:'Win ___ raids with a friend',         tiers:[10,100,1000,2000]                         },
+  { key:'picnicker',     name:'Picnicker',            cat:'general', task:'Help others catch ___ Pokémon via Lure', tiers:[5,25,500,2500]                          },
+  { key:'successor',     name:'Successor',            cat:'general', task:'Mega Evolve a Pokémon ___ times',      tiers:[1,50,500,1000]                           },
+  { key:'mega_guru',     name:'Mega Evolution Guru',  cat:'general', task:'Mega Evolve ___ different species',    tiers:[1,24,36,46]                              },
+  { key:'expert_nav',    name:'Expert Navigator',     cat:'general', task:'Complete Routes ___ times',            tiers:[10,50,200,600]                           },
+  { key:'friend_finder', name:'Friend Finder',        cat:'general', task:'Refer ___ Trainers',                   tiers:[1,10,20,50]                              },
+  { key:'raid_expert',   name:'Raid Expert',          cat:'general', task:'Reach Raid Achievement screen ___ times', tiers:[1,50,200,500]                         },
+  { key:'triathlete',    name:'Triathlete',           cat:'general', task:'Achieve 7-day streaks ___ times',      tiers:[1,10,50,100]                             },
+  { key:'tiny_collector',name:'Tiny Pokémon Collector',cat:'general',task:'Catch ___ XXS Pokémon',               tiers:[5,25,100,500]                            },
+  { key:'jumbo_collector',name:'Jumbo Pokémon Collector',cat:'general',task:'Catch ___ XXL Pokémon',             tiers:[5,25,100,500]                            },
+  { key:'showcase',      name:'Showcase',             cat:'general', task:'Win ___ PokéStop Showcases',           tiers:[1,10,50,100]                             },
+  { key:'vivillon',      name:'Vivillon Collector',   cat:'general', task:'Collect ___ Vivillon patterns',        tiers:[1,5,10,18]                               },
+  // ---- REGIONAL DEX ----
+  { key:'kanto',   name:'Kanto',   cat:'general', task:'Register ___ Kanto Pokémon',   tiers:[5,50,100,151]  },
+  { key:'johto',   name:'Johto',   cat:'general', task:'Register ___ Johto Pokémon',   tiers:[5,30,70,100]   },
+  { key:'hoenn',   name:'Hoenn',   cat:'general', task:'Register ___ Hoenn Pokémon',   tiers:[5,40,90,135]   },
+  { key:'sinnoh',  name:'Sinnoh',  cat:'general', task:'Register ___ Sinnoh Pokémon',  tiers:[5,30,80,107]   },
+  { key:'unova',   name:'Unova',   cat:'general', task:'Register ___ Unova Pokémon',   tiers:[5,50,100,156]  },
+  { key:'kalos',   name:'Kalos',   cat:'general', task:'Register ___ Kalos Pokémon',   tiers:[5,25,50,72]    },
+  { key:'alola',   name:'Alola',   cat:'general', task:'Register ___ Alola Pokémon',   tiers:[5,25,50,86]    },
+  { key:'galar',   name:'Galar',   cat:'general', task:'Register ___ Galar Pokémon',   tiers:[5,25,50,89]    },
+  { key:'hisui',   name:'Hisui',   cat:'general', task:'Register ___ Hisui Pokémon',   tiers:[1,3,5,7]       },
+  { key:'paldea',  name:'Paldea',  cat:'general', task:'Register ___ Paldea Pokémon',  tiers:[5,30,80,104]   },
+  // ---- TYPE MEDALS (all: 10 / 50 / 200 / 500) ----
+  { key:'type_normal',   name:'Schoolkid',    cat:'type', task:'Catch ___ Normal-type Pokémon',   tiers:[10,50,200,500] },
+  { key:'type_fire',     name:'Kindler',      cat:'type', task:'Catch ___ Fire-type Pokémon',     tiers:[10,50,200,500] },
+  { key:'type_water',    name:'Swimmer',      cat:'type', task:'Catch ___ Water-type Pokémon',    tiers:[10,50,200,500] },
+  { key:'type_electric', name:'Rocker',       cat:'type', task:'Catch ___ Electric-type Pokémon', tiers:[10,50,200,500] },
+  { key:'type_grass',    name:'Plant Badge',  cat:'type', task:'Catch ___ Grass-type Pokémon',    tiers:[10,50,200,500] },
+  { key:'type_ice',      name:'Skier',        cat:'type', task:'Catch ___ Ice-type Pokémon',      tiers:[10,50,200,500] },
+  { key:'type_fighting', name:'Black Belt',   cat:'type', task:'Catch ___ Fighting-type Pokémon', tiers:[10,50,200,500] },
+  { key:'type_poison',   name:'Punk Girl',    cat:'type', task:'Catch ___ Poison-type Pokémon',   tiers:[10,50,200,500] },
+  { key:'type_ground',   name:'Ruin Maniac',  cat:'type', task:'Catch ___ Ground-type Pokémon',   tiers:[10,50,200,500] },
+  { key:'type_flying',   name:'Bird Keeper',  cat:'type', task:'Catch ___ Flying-type Pokémon',   tiers:[10,50,200,500] },
+  { key:'type_psychic',  name:'Psychic',      cat:'type', task:'Catch ___ Psychic-type Pokémon',  tiers:[10,50,200,500] },
+  { key:'type_bug',      name:'Bug Catcher',  cat:'type', task:'Catch ___ Bug-type Pokémon',      tiers:[10,50,200,500] },
+  { key:'type_rock',     name:'Hiker',        cat:'type', task:'Catch ___ Rock-type Pokémon',     tiers:[10,50,200,500] },
+  { key:'type_ghost',    name:'Hex Maniac',   cat:'type', task:'Catch ___ Ghost-type Pokémon',    tiers:[10,50,200,500] },
+  { key:'type_dragon',   name:'Dragon Tamer', cat:'type', task:'Catch ___ Dragon-type Pokémon',   tiers:[10,50,200,500] },
+  { key:'type_dark',     name:'Delinquent',   cat:'type', task:'Catch ___ Dark-type Pokémon',     tiers:[10,50,200,500] },
+  { key:'type_steel',    name:'Rail Staff',   cat:'type', task:'Catch ___ Steel-type Pokémon',    tiers:[10,50,200,500] },
+  { key:'type_fairy',    name:'Fairy Tale Girl',cat:'type',task:'Catch ___ Fairy-type Pokémon',  tiers:[10,50,200,500] },
+];
+
+const TIER_ORDER = ['none','bronze','silver','gold','platinum'];
+const TIER_LABELS = { none:'Not started', bronze:'Bronze', silver:'Silver', gold:'Gold', platinum:'Platinum' };
+const MEDAL_TIER_COLORS = { none:'var(--text3)', bronze:'#c87941', silver:'#aaa', gold:'var(--gold)', platinum:'var(--purple)' };
+const TIER_EMOJI  = { none:'—', bronze:'🥉', silver:'🥈', gold:'🥇', platinum:'🏆' };
+
+let medalFilter = 'all';
+
+function setMedalFilter(f, el) {
+  medalFilter = f;
+  document.querySelectorAll('#mf-all,#mf-general,#mf-type,#mf-platinum,#mf-gold,#mf-inprogress').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderMedals();
+}
+
+// Get auto-computed value for a medal from existing trainer data
+function getMedalAutoValue(medal) {
+  if (!medal.auto) return null;
+  const snaps = [...(DB.xpSnapshots||[])].sort((a,b) => a.date > b.date ? 1 : -1);
+  if (!snaps.length) return null;
+  if (medal.auto === 'km')     return [...snaps].reverse().find(s => s.km     != null)?.km     ?? null;
+  if (medal.auto === 'caught') return [...snaps].reverse().find(s => s.caught != null)?.caught ?? null;
+  if (medal.auto === 'stops')  return [...snaps].reverse().find(s => s.stops  != null)?.stops  ?? null;
+  return null;
+}
+
+// Determine tier from value and thresholds
+function getTierForValue(value, tiers) {
+  if (value == null || value < tiers[0]) return 'none';
+  if (tiers[3] !== null && value >= tiers[3]) return 'platinum';
+  if (value >= tiers[2]) return 'gold';
+  if (value >= tiers[1]) return 'silver';
+  return 'bronze';
+}
+
+function saveMedalProgress(key, value) {
+  if (!DB.medalProgress) DB.medalProgress = {};
+  if (!DB.medalProgress[key]) DB.medalProgress[key] = {};
+  DB.medalProgress[key].value = parseFloat(value) || 0;
+  saveDB();
+  renderMedals();
+}
+
+function renderMedals() {
+  if (!DB.medalProgress) DB.medalProgress = {};
+  const search = (document.getElementById('medals-search')?.value || '').toLowerCase();
+
+  let medals = MEDALS;
+  if (search) medals = medals.filter(m => m.name.toLowerCase().includes(search) || m.task.toLowerCase().includes(search));
+  if (medalFilter === 'general')    medals = medals.filter(m => m.cat === 'general');
+  if (medalFilter === 'type')       medals = medals.filter(m => m.cat === 'type');
+  if (medalFilter === 'platinum')   medals = medals.filter(m => {
+    const val = getMedalAutoValue(m) ?? DB.medalProgress[m.key]?.value ?? 0;
+    return getTierForValue(val, m.tiers) === 'platinum';
+  });
+  if (medalFilter === 'gold')       medals = medals.filter(m => {
+    const val = getMedalAutoValue(m) ?? DB.medalProgress[m.key]?.value ?? 0;
+    return getTierForValue(val, m.tiers) === 'gold';
+  });
+  if (medalFilter === 'inprogress') medals = medals.filter(m => {
+    const val = getMedalAutoValue(m) ?? DB.medalProgress[m.key]?.value ?? 0;
+    const tier = getTierForValue(val, m.tiers);
+    return tier !== 'none' && tier !== 'platinum';
+  });
+
+  // Totals for subtitle
+  const allVals = MEDALS.map(m => ({ m, val: getMedalAutoValue(m) ?? DB.medalProgress[m.key]?.value ?? 0 }));
+  const platCount  = allVals.filter(({m,val}) => getTierForValue(val, m.tiers) === 'platinum').length;
+  const goldCount  = allVals.filter(({m,val}) => getTierForValue(val, m.tiers) === 'gold').length;
+  const silverCount= allVals.filter(({m,val}) => getTierForValue(val, m.tiers) === 'silver').length;
+  const bronzeCount= allVals.filter(({m,val}) => getTierForValue(val, m.tiers) === 'bronze').length;
+  document.getElementById('medals-subtitle').textContent =
+    `🏆 ${platCount} · 🥇 ${goldCount} · 🥈 ${silverCount} · 🥉 ${bronzeCount}`;
+
+  if (!medals.length) {
+    document.getElementById('medals-grid').innerHTML = `<div style="color:var(--text3);font-size:13px;padding:20px 0;">No medals match.</div>`;
+    return;
+  }
+
+  document.getElementById('medals-grid').innerHTML = `<div class="medals-grid">${medals.map(m => {
+    const autoVal  = getMedalAutoValue(m);
+    const storedVal = DB.medalProgress[m.key]?.value ?? 0;
+    const val  = autoVal !== null ? autoVal : storedVal;
+    const tier = getTierForValue(val, m.tiers);
+    const isAuto = autoVal !== null;
+
+    // Next target
+    const tierIdx = TIER_ORDER.indexOf(tier);
+    const nextTier = TIER_ORDER[Math.min(tierIdx + 1, TIER_ORDER.length - 1)];
+    const nextTarget = tier === 'platinum' ? m.tiers[3] || m.tiers[2]
+      : tier === 'gold'     ? (m.tiers[3] || m.tiers[2])
+      : tier === 'silver'   ? m.tiers[2]
+      : tier === 'bronze'   ? m.tiers[1]
+      : m.tiers[0];
+    const prevTarget = tier === 'platinum' ? m.tiers[2]
+      : tier === 'gold'   ? m.tiers[1]
+      : tier === 'silver' ? m.tiers[0]
+      : 0;
+    const pct = tier === 'platinum' ? 100
+      : Math.min(100, Math.round(((val - prevTarget) / (nextTarget - prevTarget)) * 100));
+
+    const barColor = tier === 'platinum' ? 'var(--purple)'
+      : tier === 'gold'   ? 'var(--gold)'
+      : tier === 'silver' ? '#aaa'
+      : tier === 'bronze' ? '#c87941'
+      : 'var(--blue)';
+
+    return `<div class="medal-card ${tier}">
+      <div>
+        <div class="medal-name">${m.name}${isAuto ? `<span class="medal-auto-badge">auto</span>` : ''}</div>
+        <div class="medal-task">${m.task.replace('___', nextTarget?.toLocaleString() || '?')}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="medal-tier ${tier}">${TIER_EMOJI[tier]} ${TIER_LABELS[tier]}</span>
+      </div>
+      <div class="medal-progress">
+        <div class="medal-progress-bar">
+          <div class="medal-progress-fill" style="width:${pct}%;background:${barColor};"></div>
+        </div>
+        <div class="medal-progress-label">
+          <span>${val > 0 ? val.toLocaleString() : '0'}</span>
+          <span>${tier !== 'platinum' ? nextTarget?.toLocaleString() : '✓'}</span>
+        </div>
+      </div>
+      ${!isAuto ? `<input class="medal-input" type="number" placeholder="Enter your progress..."
+        value="${storedVal || ''}"
+        onchange="saveMedalProgress('${m.key}', this.value)"
+        onclick="this.select()">` : ''}
+    </div>`;
+  }).join('')}</div>`;
+}
+
+
+let _confirmCallback = null;
+
+function confirmDelete(triggerEl, label, callback) {
+  const pop = document.getElementById('confirm-pop');
+  pop.querySelector('.confirm-pop-msg').textContent = `Delete ${label}?`;
+  document.getElementById('confirm-pop-yes').onclick = () => {
+    dismissConfirmPop();
+    callback();
+  };
+  const rect = triggerEl.getBoundingClientRect();
+  pop.style.display = 'flex';
+  const popH = 90;
+  const top = rect.top - popH - 8 > 0 ? rect.top - popH - 8 : rect.bottom + 8;
+  let left = rect.left - 60;
+  if (left + 200 > window.innerWidth) left = window.innerWidth - 210;
+  if (left < 8) left = 8;
+  pop.style.top  = (top + window.scrollY) + 'px';
+  pop.style.left = left + 'px';
+  setTimeout(() => document.addEventListener('click', _outsideClickHandler, { once: true }), 10);
+}
+
+function _outsideClickHandler(e) {
+  const pop = document.getElementById('confirm-pop');
+  if (pop && !pop.contains(e.target)) dismissConfirmPop();
+}
+
+function dismissConfirmPop() {
+  document.getElementById('confirm-pop').style.display = 'none';
+  document.removeEventListener('click', _outsideClickHandler);
+}
+
 // Delete helpers
-function deleteGiftCard(id) { DB.giftCards = DB.giftCards.filter(g=>g.id!==id); saveDB(); renderSpending(); }
-function deleteCoinPurchase(id) { DB.coinPurchases = DB.coinPurchases.filter(g=>g.id!==id); saveDB(); renderSpending(); }
-function deleteCoinSpend(id) { DB.coinSpends = DB.coinSpends.filter(g=>g.id!==id); saveDB(); renderSpending(); }
-function deleteGymCoins(id) { DB.gymCoins = (DB.gymCoins||[]).filter(g=>g.id!==id); saveDB(); renderSpending(); }
-function deleteEvent(id) { DB.events = DB.events.filter(g=>g.id!==id); saveDB(); renderEvents(); }
+function deleteGiftCard(id, el)     { confirmDelete(el, 'this gift card',    () => { DB.giftCards     = DB.giftCards.filter(g=>g.id!==id);     saveDB(); renderSpending(); }); }
+function deleteCoinPurchase(id, el) { confirmDelete(el, 'this coin purchase', () => { DB.coinPurchases  = DB.coinPurchases.filter(g=>g.id!==id);  saveDB(); renderSpending(); }); }
+function deleteCoinSpend(id, el)    { confirmDelete(el, 'this coin spend',    () => { DB.coinSpends     = DB.coinSpends.filter(g=>g.id!==id);     saveDB(); renderSpending(); }); }
+function deleteGymCoins(id, el)     { confirmDelete(el, 'this gym entry',     () => { DB.gymCoins      = (DB.gymCoins||[]).filter(g=>g.id!==id);  saveDB(); renderSpending(); }); }
+function deleteEvent(id, el)        { confirmDelete(el, 'this event',         () => { DB.events        = DB.events.filter(g=>g.id!==id);          saveDB(); renderEvents();   }); }
 
 function setINRStarting(val) {
   DB.inrStarting = parseFloat(val) || 0;
@@ -2785,12 +3093,13 @@ function showPage(p) {
   document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
   document.getElementById('page-' + p).classList.add('active');
-  document.querySelectorAll('.nav-btn')[['home','dex','spending','xp','raids','events','journal','analytics','manage'].indexOf(p)].classList.add('active');
+  document.querySelectorAll('.nav-btn')[['home','dex','spending','xp','medals','raids','events','journal','analytics','manage'].indexOf(p)].classList.add('active');
   currentPage = p;
   if (p === 'home') renderDashboard();
   if (p === 'dex') renderDex();
   if (p === 'spending') renderSpending();
   if (p === 'xp') renderXP();
+  if (p === 'medals') renderMedals();
   if (p === 'raids') renderRaids();
   if (p === 'events') renderEvents();
   if (p === 'journal') renderJournal();
@@ -3424,7 +3733,7 @@ function renderJournal() {
         </div>
         ${e.isManual ? `<div class="jnl-actions">
           <button class="btn sm" onclick="editJournalEntry('${e.id}')">✎</button>
-          <button class="btn sm danger" onclick="deleteJournalEntry('${e.id}')">✕</button>
+          <button class="btn sm danger" onclick="deleteJournalEntry('${e.id}', this)">✕</button>
         </div>` : ''}
       </div>`;
     }).join('');
@@ -3472,10 +3781,12 @@ function editJournalEntry(id) {
   document.getElementById('modal-journal').classList.add('open');
 }
 
-function deleteJournalEntry(id) {
-  DB.journal = (DB.journal||[]).filter(j => j.id !== id);
-  saveDB(); renderJournal();
-  toast('Entry removed');
+function deleteJournalEntry(id, el) {
+  confirmDelete(el, 'this journal entry', () => {
+    DB.journal = (DB.journal||[]).filter(j => j.id !== id);
+    saveDB(); renderJournal();
+    toast('Entry removed');
+  });
 }
 
 
