@@ -1186,7 +1186,7 @@ let DB = {
   events: [],               // [{ id, name, date, account, coins, shinies, caught, xp, notes }]
   raids: [],                // [{ id, date, account, boss, tier, passType, result, shiny, notes }]
   journal: [],              // [{ id, date, type, text, pokemon, emoji, notes }] — manual entries
-  medalProgress: {},        // { medalKey: { value: number, tier: 'bronze'|'silver'|'gold'|'platinum' } }
+  medalProgress: {},        // { medalKey: { value, logToJournal, earned: { bronze, silver, gold, platinum } } }
 };
 
 function saveDB() {
@@ -2900,10 +2900,65 @@ function getTierForValue(value, tiers) {
 
 function saveMedalProgress(key, value) {
   if (!DB.medalProgress) DB.medalProgress = {};
-  if (!DB.medalProgress[key]) DB.medalProgress[key] = {};
-  DB.medalProgress[key].value = parseFloat(value) || 0;
+  const medal = MEDALS.find(m => m.key === key);
+  if (!medal) return;
+
+  const entry = DB.medalProgress[key] || { value: 0, logToJournal: false, earned: {} };
+  const oldVal  = entry.value || 0;
+  const newVal  = parseFloat(value) || 0;
+  const oldTier = getTierForValue(oldVal, medal.tiers);
+  const newTier = getTierForValue(newVal, medal.tiers);
+
+  entry.value = newVal;
+  if (!entry.earned) entry.earned = {};
+
+  // Stamp timestamps for any newly crossed tiers
+  const today = new Date().toISOString().split('T')[0];
+  const tierList = ['bronze','silver','gold','platinum'];
+  const oldIdx = TIER_ORDER.indexOf(oldTier);
+  const newIdx = TIER_ORDER.indexOf(newTier);
+
+  if (newIdx > oldIdx) {
+    // Crossed one or more tiers
+    tierList.forEach(t => {
+      const tIdx = TIER_ORDER.indexOf(t);
+      if (tIdx > oldIdx && tIdx <= newIdx && !entry.earned[t]) {
+        entry.earned[t] = today;
+        // Log to journal if flag is on
+        if (entry.logToJournal) {
+          if (!DB.journal) DB.journal = [];
+          const tierEmoji = { bronze:'🥉', silver:'🥈', gold:'🥇', platinum:'🏆' };
+          DB.journal.push({
+            id: uid(), date: today, type: 'milestone',
+            text: `${tierEmoji[t]} ${medal.name} — ${t.charAt(0).toUpperCase()+t.slice(1)}`,
+            pokemon: '', emoji: tierEmoji[t], notes: '',
+          });
+        }
+      }
+    });
+  }
+
+  DB.medalProgress[key] = entry;
   saveDB();
   renderMedals();
+  if (currentPage === 'journal') renderJournal();
+}
+
+function toggleMedalJournal(key) {
+  if (!DB.medalProgress) DB.medalProgress = {};
+  if (!DB.medalProgress[key]) DB.medalProgress[key] = { value: 0, logToJournal: false, earned: {} };
+  DB.medalProgress[key].logToJournal = !DB.medalProgress[key].logToJournal;
+  saveDB();
+  renderMedals();
+}
+
+function saveMedalEarnedDate(key, tier, dateVal) {
+  if (!DB.medalProgress) DB.medalProgress = {};
+  if (!DB.medalProgress[key]) DB.medalProgress[key] = { value: 0, logToJournal: false, earned: {} };
+  if (!DB.medalProgress[key].earned) DB.medalProgress[key].earned = {};
+  if (dateVal) DB.medalProgress[key].earned[tier] = dateVal;
+  else delete DB.medalProgress[key].earned[tier];
+  saveDB();
 }
 
 function renderMedals() {
@@ -2943,19 +2998,21 @@ function renderMedals() {
   }
 
   document.getElementById('medals-grid').innerHTML = `<div class="medals-grid">${medals.map(m => {
-    const autoVal  = getMedalAutoValue(m);
-    const storedVal = DB.medalProgress[m.key]?.value ?? 0;
+    const autoVal   = getMedalAutoValue(m);
+    const entry     = DB.medalProgress[m.key] || { value: 0, logToJournal: false, earned: {} };
+    const storedVal = entry.value || 0;
     const val  = autoVal !== null ? autoVal : storedVal;
     const tier = getTierForValue(val, m.tiers);
     const isAuto = autoVal !== null;
+    const earned = entry.earned || {};
+    const logOn  = !!entry.logToJournal;
 
     // Next target
-    const tierIdx = TIER_ORDER.indexOf(tier);
-    const nextTier = TIER_ORDER[Math.min(tierIdx + 1, TIER_ORDER.length - 1)];
-    const nextTarget = tier === 'platinum' ? m.tiers[3] || m.tiers[2]
-      : tier === 'gold'     ? (m.tiers[3] || m.tiers[2])
-      : tier === 'silver'   ? m.tiers[2]
-      : tier === 'bronze'   ? m.tiers[1]
+    const tierIdx    = TIER_ORDER.indexOf(tier);
+    const nextTarget = tier === 'platinum' ? (m.tiers[3] || m.tiers[2])
+      : tier === 'gold'   ? (m.tiers[3] || m.tiers[2])
+      : tier === 'silver' ? m.tiers[2]
+      : tier === 'bronze' ? m.tiers[1]
       : m.tiers[0];
     const prevTarget = tier === 'platinum' ? m.tiers[2]
       : tier === 'gold'   ? m.tiers[1]
@@ -2970,13 +3027,36 @@ function renderMedals() {
       : tier === 'bronze' ? '#c87941'
       : 'var(--blue)';
 
+    // Earned tier rows
+    const tierList = ['bronze','silver','gold','platinum'].filter(t =>
+      m.tiers[['bronze','silver','gold','platinum'].indexOf(t)] !== null
+    );
+    const earnedRows = tierList.map(t => {
+      const tIdx = TIER_ORDER.indexOf(t);
+      const achieved = TIER_ORDER.indexOf(tier) >= tIdx;
+      const dateVal  = earned[t] || '';
+      const emoji    = { bronze:'🥉', silver:'🥈', gold:'🥇', platinum:'🏆' }[t];
+      return `<div style="display:flex;align-items:center;gap:6px;font-size:11px;${achieved?'':'opacity:0.4'}">
+        <span style="width:16px;text-align:center;">${emoji}</span>
+        <span style="color:var(--text3);width:52px;">${t.charAt(0).toUpperCase()+t.slice(1)}</span>
+        <input type="date" value="${dateVal}"
+          style="background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:2px 5px;color:var(--text);font-size:11px;${achieved?'':'pointer-events:none'}"
+          ${achieved ? `onchange="saveMedalEarnedDate('${m.key}','${t}',this.value)"` : 'disabled'}>
+      </div>`;
+    }).join('');
+
     return `<div class="medal-card ${tier}">
       <div>
         <div class="medal-name">${m.name}${isAuto ? `<span class="medal-auto-badge">auto</span>` : ''}</div>
         <div class="medal-task">${m.task.replace('___', nextTarget?.toLocaleString() || '?')}</div>
       </div>
-      <div style="display:flex;align-items:center;gap:6px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
         <span class="medal-tier ${tier}">${TIER_EMOJI[tier]} ${TIER_LABELS[tier]}</span>
+        <label title="Log tier achievements to Journal" style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:10px;color:${logOn?'var(--blue)':'var(--text3)'};">
+          <input type="checkbox" ${logOn?'checked':''} onchange="toggleMedalJournal('${m.key}')"
+            style="width:12px;height:12px;accent-color:var(--blue);cursor:pointer;">
+          Log
+        </label>
       </div>
       <div class="medal-progress">
         <div class="medal-progress-bar">
@@ -2984,13 +3064,14 @@ function renderMedals() {
         </div>
         <div class="medal-progress-label">
           <span>${val > 0 ? val.toLocaleString() : '0'}</span>
-          <span>${tier !== 'platinum' ? nextTarget?.toLocaleString() : '✓'}</span>
+          <span>${tier !== 'platinum' ? nextTarget?.toLocaleString() : '✓ Max'}</span>
         </div>
       </div>
       ${!isAuto ? `<input class="medal-input" type="number" placeholder="Enter your progress..."
         value="${storedVal || ''}"
         onchange="saveMedalProgress('${m.key}', this.value)"
         onclick="this.select()">` : ''}
+      <div style="display:flex;flex-direction:column;gap:4px;margin-top:2px;">${earnedRows}</div>
     </div>`;
   }).join('')}</div>`;
 }
