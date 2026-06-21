@@ -244,6 +244,41 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .ev-bonus-tag { display:inline-block; padding:2px 7px; border-radius:99px; font-size:10px; background:var(--bg4); color:var(--text3); border:1px solid var(--border); }
 .ev-bonus-toggle { padding:4px 10px; border-radius:99px; border:1px solid var(--border); background:transparent; color:var(--text3); font-size:11px; cursor:pointer; transition:all 0.15s; }
 .ev-bonus-toggle.active { background:var(--blue-bg); color:var(--blue); border-color:rgba(79,142,247,0.3); }
+/* ATTACKERS */
+.atk-tier-label { font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin:14px 0 8px; display:flex;align-items:center;gap:8px; }
+.atk-tier-label .atk-tier-badge { padding:2px 10px;border-radius:99px;font-size:12px;font-weight:800; }
+.atk-tier-S  .atk-tier-badge { background:var(--red-bg);    color:var(--red);    border:1px solid rgba(244,91,91,0.4); }
+.atk-tier-Ap .atk-tier-badge { background:var(--orange-bg); color:var(--orange); border:1px solid rgba(251,146,60,0.4); }
+.atk-tier-A  .atk-tier-badge { background:var(--gold-bg);   color:var(--gold);   border:1px solid rgba(245,166,35,0.4); }
+.atk-tier-Bp .atk-tier-badge { background:var(--blue-bg);   color:var(--blue);   border:1px solid rgba(79,142,247,0.4); }
+.atk-tier-B  .atk-tier-badge { background:var(--bg3);       color:var(--text2);  border:1px solid var(--border); }
+.atk-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px;margin-bottom:10px; }
+.atk-card { background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px;display:flex;flex-direction:column;gap:8px;transition:border-color 0.15s; }
+.atk-card.has-copies { border-color:var(--green); }
+.atk-card.has-shadow { border-left:3px solid var(--purple); }
+.atk-name { font-size:13px;font-weight:600;color:var(--text);line-height:1.3; }
+.atk-types { display:flex;gap:4px;flex-wrap:wrap; }
+.atk-type-chip { font-size:10px;padding:1px 6px;border-radius:99px;font-weight:600; }
+.atk-stats-row { display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--text3); }
+.atk-stat { display:flex;flex-direction:column;gap:1px; }
+.atk-stat-val { font-size:12px;font-weight:600;color:var(--text2); }
+.atk-moveset { font-size:11px;color:var(--text3);line-height:1.5; }
+.atk-moveset .elite { color:var(--gold); }
+.atk-copies { display:flex;flex-direction:column;gap:4px;margin-top:2px; }
+.atk-copy-row { background:var(--bg3);border-radius:var(--radius);padding:7px 10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px; }
+.atk-copy-row .copy-badge { padding:1px 6px;border-radius:99px;font-size:10px;font-weight:600; }
+.atk-copy-row .shadow-badge { background:var(--purple-bg);color:var(--purple); }
+.atk-copy-row .purified-badge { background:var(--blue-bg);color:var(--blue); }
+.atk-copy-main { font-weight:600;color:var(--text); }
+.atk-copy-ivs { color:var(--text3); }
+.atk-copy-note { color:var(--text3);font-style:italic;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.atk-add-btn { padding:5px 10px;border-radius:var(--radius);border:1px dashed var(--border);background:transparent;color:var(--text3);font-size:11px;cursor:pointer;transition:all 0.15s;width:100%;text-align:center; }
+.atk-add-btn:hover { border-color:var(--blue);color:var(--blue); }
+.atk-tag-shadow { font-size:10px;color:var(--purple);font-weight:600; }
+.atk-tag-mega   { font-size:10px;color:var(--gold);font-weight:600; }
+.type-section-label { font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px;display:flex;align-items:center;gap:6px; }
+@media(max-width:500px){ .atk-grid{ grid-template-columns:1fr; } }
+
 /* MEDALS */
 .medals-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; }
 .medal-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px; display:flex; flex-direction:column; gap:8px; transition:border-color 0.15s; }
@@ -355,6 +390,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   <button class="nav-btn" onclick="showPage('xp')">Trainer</button>
   <button class="nav-btn" onclick="showPage('medals')">Medals</button>
   <button class="nav-btn" onclick="showPage('raids')">Raids</button>
+  <button class="nav-btn" onclick="showPage('attackers')">Attackers</button>
   <button class="nav-btn" onclick="showPage('events')">Events</button>
   <button class="nav-btn" onclick="showPage('journal')">Journal</button>
   <button class="nav-btn" onclick="showPage('analytics')">Analytics</button>
@@ -507,6 +543,102 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     </select>
   </div>
   <div id="raids-list"></div>
+</div>
+
+<!-- ===================== ATTACKERS PAGE ===================== -->
+<div class="page" id="page-attackers">
+  <div class="section-header">
+    <div>
+      <div class="section-title">Raid Attackers</div>
+      <div class="section-subtitle" id="atk-subtitle"></div>
+    </div>
+  </div>
+  <!-- Stats bar -->
+  <div class="stats-grid" id="atk-stats" style="margin-bottom:14px;"></div>
+  <!-- Controls -->
+  <div class="controls-row" style="margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+    <div style="display:flex;gap:4px;flex-wrap:wrap;">
+      <button class="filter-pill active" id="av-tier" onclick="setAtkView('tier',this)">By tier</button>
+      <button class="filter-pill"        id="av-type" onclick="setAtkView('type',this)">By type</button>
+    </div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;" id="atk-type-pills" style="display:none;"></div>
+    <div style="margin-left:auto;display:flex;gap:6px;">
+      <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text2);cursor:pointer;">
+        <input type="checkbox" id="atk-owned-only" onchange="renderAttackers()" style="accent-color:var(--blue);">
+        Owned only
+      </label>
+      <input class="search-input" type="text" id="atk-search" placeholder="Search..." oninput="renderAttackers()" style="max-width:160px;">
+    </div>
+  </div>
+  <div id="attackers-list"></div>
+</div>
+
+<!-- Attacker copy modal -->
+<div class="modal-overlay" id="modal-attacker">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-title" id="atk-modal-title">Add copy</div>
+    <input type="hidden" id="atk-modal-key">
+    <input type="hidden" id="atk-modal-copy-id">
+    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:14px;" id="atk-modal-species"></div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">CP</label>
+        <input class="form-input" type="number" id="atk-cp" placeholder="e.g. 4200">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Level</label>
+        <input class="form-input" type="number" id="atk-level" placeholder="1–55" min="1" max="55" step="0.5">
+      </div>
+      <div class="form-group">
+        <label class="form-label">ATK IV (0–15)</label>
+        <input class="form-input" type="number" id="atk-iv-atk" placeholder="15" min="0" max="15">
+      </div>
+      <div class="form-group">
+        <label class="form-label">DEF IV (0–15)</label>
+        <input class="form-input" type="number" id="atk-iv-def" placeholder="15" min="0" max="15">
+      </div>
+      <div class="form-group">
+        <label class="form-label">HP IV (0–15)</label>
+        <input class="form-input" type="number" id="atk-iv-hp" placeholder="15" min="0" max="15">
+      </div>
+      <div class="form-group" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:4px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;">
+          <input type="checkbox" id="atk-shadow" style="accent-color:var(--purple);width:14px;height:14px;">
+          Shadow
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;">
+          <input type="checkbox" id="atk-purified" style="accent-color:var(--blue);width:14px;height:14px;">
+          Purified
+        </label>
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label class="form-label">Fast move</label>
+        <input class="form-input" type="text" id="atk-fast-move" placeholder="e.g. Dragon Tail">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Charged move</label>
+        <input class="form-input" type="text" id="atk-charged-move" placeholder="e.g. Outrage">
+      </div>
+      <div class="form-group" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:4px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;">
+          <input type="checkbox" id="atk-elite-fast" style="accent-color:var(--gold);width:14px;height:14px;">
+          Elite fast TM
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;">
+          <input type="checkbox" id="atk-elite-charged" style="accent-color:var(--gold);width:14px;height:14px;">
+          Elite charged TM
+        </label>
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label class="form-label">Notes</label>
+        <input class="form-input" type="text" id="atk-notes-modal" placeholder="XL candy, best buddy, etc.">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-attacker')">Cancel</button>
+      <button class="btn primary" onclick="saveAttackerCopy()">Save</button>
+    </div>
+  </div>
 </div>
 
 <!-- ===================== EVENTS PAGE ===================== -->
@@ -1187,6 +1319,7 @@ let DB = {
   raids: [],                // [{ id, date, account, boss, tier, passType, result, shiny, notes }]
   journal: [],              // [{ id, date, type, text, pokemon, emoji, notes }] — manual entries
   medalProgress: {},        // { medalKey: { value, logToJournal, earned: { bronze, silver, gold, platinum } } }
+  attackers: {},            // { speciesKey: [{ id, cp, level, ivAtk, ivDef, ivHp, shadow, purified, fastMove, chargedMove, eliteFast, eliteCharged, notes }] }
 };
 
 function saveDB() {
@@ -2783,7 +2916,482 @@ function evPopulateModal() {
   }
 }
 
-// ===================== MEDALS =====================
+// ===================== ATTACKERS =====================
+// Source: PokéBase attackers tier list (June 2026)
+// tier: S | A+ | A | B+ | B
+// tags: shadow, mega, primal, origin, crowned, forme
+const ATTACKERS = [
+  // ---- S TIER ----
+  { key:'shadow_reshiram',       name:'Shadow Reshiram',              tier:'S',  types:['Dragon','Fire'],     tags:['shadow'] },
+  { key:'keldeo_resolute',       name:'Keldeo (Resolute)',            tier:'S',  types:['Fighting','Water'],  tags:[] },
+  { key:'shadow_dialga',         name:'Shadow Dialga',                tier:'S',  types:['Dragon','Steel'],    tags:['shadow'] },
+  { key:'shadow_palkia',         name:'Shadow Palkia',                tier:'S',  types:['Dragon','Water'],    tags:['shadow'] },
+  { key:'shadow_heatran',        name:'Shadow Heatran',               tier:'S',  types:['Fire','Steel'],      tags:['shadow'] },
+  { key:'shadow_groudon',        name:'Shadow Groudon',               tier:'S',  types:['Ground'],            tags:['shadow'] },
+  { key:'mega_diancie',          name:'Mega Diancie',                 tier:'S',  types:['Fairy','Rock'],      tags:['mega'] },
+  { key:'zamazenta_crowned',     name:'Zamazenta (Crowned Shield)',   tier:'S',  types:['Fighting','Steel'],  tags:[] },
+  { key:'zacian_crowned',        name:'Zacian (Crowned Sword)',       tier:'S',  types:['Fairy','Steel'],     tags:[] },
+  { key:'eternatus',             name:'Eternatus',                    tier:'S',  types:['Dragon','Poison'],   tags:[] },
+  { key:'blacephalon',           name:'Blacephalon',                  tier:'S',  types:['Fire','Ghost'],      tags:[] },
+  { key:'dusk_mane_necrozma',    name:'Dusk Mane Necrozma',          tier:'S',  types:['Psychic','Steel'],   tags:[] },
+  { key:'dawn_wings_necrozma',   name:'Dawn Wings Necrozma',         tier:'S',  types:['Ghost','Psychic'],   tags:[] },
+  { key:'white_kyurem',          name:'White Kyurem',                 tier:'S',  types:['Dragon','Ice'],      tags:[] },
+  { key:'black_kyurem',          name:'Black Kyurem',                 tier:'S',  types:['Dragon','Ice'],      tags:[] },
+  { key:'shadow_rampardos',      name:'Shadow Rampardos',             tier:'S',  types:['Rock'],              tags:['shadow'] },
+  { key:'primal_groudon',        name:'Primal Groudon',              tier:'S',  types:['Ground','Fire'],     tags:['primal'] },
+  { key:'shadow_salamence',      name:'Shadow Salamence',             tier:'S',  types:['Dragon','Flying'],   tags:['shadow'] },
+  { key:'primal_kyogre',         name:'Primal Kyogre',               tier:'S',  types:['Water'],             tags:['primal'] },
+  { key:'mega_rayquaza',         name:'Mega Rayquaza',                tier:'S',  types:['Dragon','Flying'],   tags:['mega'] },
+  { key:'mega_lucario',          name:'Mega Lucario',                 tier:'S',  types:['Fighting','Steel'],  tags:['mega'] },
+  { key:'mega_blaziken',         name:'Mega Blaziken',                tier:'S',  types:['Fighting','Fire'],   tags:['mega'] },
+  { key:'mega_mewtwo_y',         name:'Mega Mewtwo Y',               tier:'S',  types:['Psychic'],           tags:['mega'] },
+  { key:'shadow_mewtwo',         name:'Shadow Mewtwo',                tier:'S',  types:['Psychic'],           tags:['shadow'] },
+  { key:'mega_gengar',           name:'Mega Gengar',                  tier:'S',  types:['Ghost','Poison'],    tags:['mega'] },
+  { key:'mega_charizard_y',      name:'Mega Charizard Y',            tier:'S',  types:['Fire','Flying'],     tags:['mega'] },
+  // ---- A+ TIER ----
+  { key:'shadow_landorus_i',     name:'Shadow Landorus (Incarnate)', tier:'A+', types:['Flying','Ground'],   tags:['shadow'] },
+  { key:'shadow_greninja',       name:'Shadow Greninja',              tier:'A+', types:['Dark','Water'],      tags:['shadow'] },
+  { key:'mega_raichu_y',         name:'Mega Raichu Y',               tier:'A+', types:['Electric'],          tags:['mega'] },
+  { key:'shadow_hydreigon',      name:'Shadow Hydreigon',             tier:'A+', types:['Dark','Dragon'],     tags:['shadow'] },
+  { key:'shadow_darkrai',        name:'Shadow Darkrai',               tier:'A+', types:['Dark'],              tags:['shadow'] },
+  { key:'shadow_toucannon',      name:'Shadow Toucannon',             tier:'A+', types:['Flying','Normal'],   tags:['shadow'] },
+  { key:'shadow_vikavolt',       name:'Shadow Vikavolt',              tier:'A+', types:['Bug','Electric'],    tags:['shadow'] },
+  { key:'shadow_tyrantrum',      name:'Shadow Tyrantrum',             tier:'A+', types:['Dragon','Rock'],     tags:['shadow'] },
+  { key:'shadow_conkeldurr',     name:'Shadow Conkeldurr',            tier:'A+', types:['Fighting'],          tags:['shadow'] },
+  { key:'shadow_darmanitan',     name:'Shadow Darmanitan',            tier:'A+', types:['Fire'],              tags:['shadow'] },
+  { key:'kartana',               name:'Kartana',                      tier:'A+', types:['Grass','Steel'],     tags:[] },
+  { key:'regieleki',             name:'Regieleki',                    tier:'A+', types:['Electric'],          tags:[] },
+  { key:'xurkitree',             name:'Xurkitree',                    tier:'A+', types:['Electric'],          tags:[] },
+  { key:'zeraora',               name:'Zeraora',                      tier:'A+', types:['Electric'],          tags:[] },
+  { key:'shadow_chandelure',     name:'Shadow Chandelure',            tier:'A+', types:['Fire','Ghost'],      tags:['shadow'] },
+  { key:'landorus_therian',      name:'Landorus (Therian)',           tier:'A+', types:['Flying','Ground'],   tags:[] },
+  { key:'shadow_excadrill',      name:'Shadow Excadrill',             tier:'A+', types:['Ground','Steel'],    tags:['shadow'] },
+  { key:'shadow_regigigas',      name:'Shadow Regigigas',             tier:'A+', types:['Normal'],            tags:['shadow'] },
+  { key:'zekrom',                name:'Zekrom',                       tier:'A+', types:['Dragon','Electric'], tags:[] },
+  { key:'terrakion',             name:'Terrakion',                    tier:'A+', types:['Fighting','Rock'],   tags:[] },
+  { key:'reshiram',              name:'Reshiram',                     tier:'A+', types:['Dragon','Fire'],     tags:[] },
+  { key:'shadow_gigalith',       name:'Shadow Gigalith',              tier:'A+', types:['Rock'],              tags:['shadow'] },
+  { key:'palkia_origin',         name:'Palkia (Origin Forme)',        tier:'A+', types:['Dragon','Water'],    tags:[] },
+  { key:'shadow_kyogre',         name:'Shadow Kyogre',                tier:'A+', types:['Water'],             tags:['shadow'] },
+  { key:'lucario',               name:'Lucario',                      tier:'A+', types:['Fighting','Steel'],  tags:[] },
+  { key:'shadow_mamoswine',      name:'Shadow Mamoswine',             tier:'A+', types:['Ice','Ground'],      tags:['shadow'] },
+  { key:'shadow_electivire',     name:'Shadow Electivire',            tier:'A+', types:['Electric'],          tags:['shadow'] },
+  { key:'rayquaza',              name:'Rayquaza',                     tier:'A+', types:['Dragon','Flying'],   tags:[] },
+  { key:'shadow_magnezone',      name:'Shadow Magnezone',             tier:'A+', types:['Electric','Steel'],  tags:['shadow'] },
+  { key:'shadow_garchomp',       name:'Shadow Garchomp',              tier:'A+', types:['Dragon','Ground'],   tags:['shadow'] },
+  { key:'shadow_rhyperior',      name:'Shadow Rhyperior',             tier:'A+', types:['Ground','Rock'],     tags:['shadow'] },
+  { key:'mega_abomasnow',        name:'Mega Abomasnow',               tier:'A+', types:['Grass','Ice'],       tags:['mega'] },
+  { key:'mega_garchomp',         name:'Mega Garchomp',                tier:'A+', types:['Dragon','Ground'],   tags:['mega'] },
+  { key:'shadow_metagross',      name:'Shadow Metagross',             tier:'A+', types:['Psychic','Steel'],   tags:['shadow'] },
+  { key:'mega_metagross',        name:'Mega Metagross',               tier:'A+', types:['Psychic','Steel'],   tags:['mega'] },
+  { key:'mega_glalie',           name:'Mega Glalie',                  tier:'A+', types:['Ice'],               tags:['mega'] },
+  { key:'mega_manectric',        name:'Mega Manectric',               tier:'A+', types:['Electric'],          tags:['mega'] },
+  { key:'mega_absol',            name:'Mega Absol',                   tier:'A+', types:['Dark'],              tags:['mega'] },
+  { key:'shadow_tyranitar',      name:'Shadow Tyranitar',             tier:'A+', types:['Dark','Rock'],       tags:['shadow'] },
+  { key:'shadow_blaziken',       name:'Shadow Blaziken',              tier:'A+', types:['Fighting','Fire'],   tags:['shadow'] },
+  { key:'shadow_ho_oh',          name:'Shadow Ho-Oh',                 tier:'A+', types:['Fire','Flying'],     tags:['shadow'] },
+  { key:'mega_gardevoir',        name:'Mega Gardevoir',               tier:'A+', types:['Fairy','Psychic'],   tags:['mega'] },
+  { key:'shadow_raikou',         name:'Shadow Raikou',                tier:'A+', types:['Electric'],          tags:['shadow'] },
+  { key:'shadow_gardevoir',      name:'Shadow Gardevoir',             tier:'A+', types:['Fairy','Psychic'],   tags:['shadow'] },
+  { key:'mega_sceptile',         name:'Mega Sceptile',                tier:'A+', types:['Dragon','Grass'],    tags:['mega'] },
+  { key:'shadow_swampert',       name:'Shadow Swampert',              tier:'A+', types:['Ground','Water'],    tags:['shadow'] },
+  { key:'mega_tyranitar',        name:'Mega Tyranitar',               tier:'A+', types:['Dark','Rock'],       tags:['mega'] },
+  { key:'shadow_dragonite',      name:'Shadow Dragonite',             tier:'A+', types:['Dragon','Flying'],   tags:['shadow'] },
+  { key:'shadow_moltres',        name:'Shadow Moltres',               tier:'A+', types:['Fire','Flying'],     tags:['shadow'] },
+  { key:'mega_mewtwo_x',         name:'Mega Mewtwo X',               tier:'A+', types:['Fighting','Psychic'],tags:['mega'] },
+  { key:'shadow_gengar',         name:'Shadow Gengar',                tier:'A+', types:['Ghost','Poison'],    tags:['shadow'] },
+  { key:'shadow_machamp',        name:'Shadow Machamp',               tier:'A+', types:['Fighting'],          tags:['shadow'] },
+  // ---- A TIER ----
+  { key:'shadow_kingler',        name:'Shadow Kingler',               tier:'A',  types:['Water'],             tags:['shadow'] },
+  { key:'shadow_delphox',        name:'Shadow Delphox',               tier:'A',  types:['Fire','Psychic'],    tags:['shadow'] },
+  { key:'shadow_chesnaught',     name:'Shadow Chesnaught',            tier:'A',  types:['Fighting','Grass'],  tags:['shadow'] },
+  { key:'mega_dragonite',        name:'Mega Dragonite',               tier:'A',  types:['Dragon','Flying'],   tags:['mega'] },
+  { key:'shadow_giratina_alt',   name:'Shadow Giratina (Altered)',    tier:'A',  types:['Dragon','Ghost'],    tags:['shadow'] },
+  { key:'shadow_emboar',         name:'Shadow Emboar',                tier:'A',  types:['Fighting','Fire'],   tags:['shadow'] },
+  { key:'baxcalibur',            name:'Baxcalibur',                   tier:'A',  types:['Dragon','Ice'],      tags:[] },
+  { key:'lunala',                name:'Lunala',                       tier:'A',  types:['Ghost','Psychic'],   tags:[] },
+  { key:'yveltal',               name:'Yveltal',                      tier:'A',  types:['Dark','Flying'],     tags:[] },
+  { key:'regidrago',             name:'Regidrago',                    tier:'A',  types:['Dragon'],            tags:[] },
+  { key:'enamorus_i',            name:'Enamorus (Incarnate)',         tier:'A',  types:['Fairy','Flying'],    tags:[] },
+  { key:'hoopa_unbound',         name:'Hoopa (Unbound)',              tier:'A',  types:['Dark','Psychic'],    tags:[] },
+  { key:'glimmora',              name:'Glimmora',                     tier:'A',  types:['Poison','Rock'],     tags:[] },
+  { key:'urshifu_single',        name:'Urshifu (Single Strike)',      tier:'A',  types:['Dark','Fighting'],   tags:[] },
+  { key:'urshifu_rapid',         name:'Urshifu (Rapid Strike)',       tier:'A',  types:['Fighting','Water'],  tags:[] },
+  { key:'darkrai',               name:'Darkrai',                      tier:'A',  types:['Dark'],              tags:[] },
+  { key:'heatran',               name:'Heatran',                      tier:'A',  types:['Fire','Steel'],      tags:[] },
+  { key:'giratina_origin',       name:'Giratina (Origin)',            tier:'A',  types:['Dragon','Ghost'],    tags:[] },
+  { key:'keldeo',                name:'Keldeo',                       tier:'A',  types:['Fighting','Water'],  tags:[] },
+  { key:'shaymin_sky',           name:'Shaymin (Sky Forme)',          tier:'A',  types:['Flying','Grass'],    tags:[] },
+  { key:'palkia',                name:'Palkia',                       tier:'A',  types:['Dragon','Water'],    tags:[] },
+  { key:'hydreigon',             name:'Hydreigon',                    tier:'A',  types:['Dark','Dragon'],     tags:[] },
+  { key:'thundurus_therian',     name:'Thundurus (Therian)',          tier:'A',  types:['Electric','Flying'], tags:[] },
+  { key:'volcarona',             name:'Volcarona',                    tier:'A',  types:['Bug','Fire'],        tags:[] },
+  { key:'chandelure',            name:'Chandelure',                   tier:'A',  types:['Fire','Ghost'],      tags:[] },
+  { key:'conkeldurr',            name:'Conkeldurr',                   tier:'A',  types:['Fighting'],          tags:[] },
+  { key:'dialga_origin',         name:'Dialga (Origin Forme)',        tier:'A',  types:['Dragon','Steel'],    tags:[] },
+  { key:'mamoswine',             name:'Mamoswine',                    tier:'A',  types:['Ice','Ground'],      tags:[] },
+  { key:'garchomp',              name:'Garchomp',                     tier:'A',  types:['Dragon','Ground'],   tags:[] },
+  { key:'metagross',             name:'Metagross',                    tier:'A',  types:['Psychic','Steel'],   tags:[] },
+  { key:'mega_latios',           name:'Mega Latios',                  tier:'A',  types:['Dragon','Psychic'],  tags:['mega'] },
+  { key:'groudon',               name:'Groudon',                      tier:'A',  types:['Ground'],            tags:[] },
+  { key:'rhyperior',             name:'Rhyperior',                    tier:'A',  types:['Ground','Rock'],     tags:[] },
+  { key:'salamence',             name:'Salamence',                    tier:'A',  types:['Dragon','Flying'],   tags:[] },
+  { key:'shadow_honchkrow',      name:'Shadow Honchkrow',             tier:'A',  types:['Dark','Flying'],     tags:['shadow'] },
+  { key:'rampardos',             name:'Rampardos',                    tier:'A',  types:['Rock'],              tags:[] },
+  { key:'mega_latias',           name:'Mega Latias',                  tier:'A',  types:['Dragon','Psychic'],  tags:['mega'] },
+  { key:'shadow_latios',         name:'Shadow Latios',                tier:'A',  types:['Dragon','Psychic'],  tags:['shadow'] },
+  { key:'shadow_staraptor',      name:'Shadow Staraptor',             tier:'A',  types:['Flying','Normal'],   tags:['shadow'] },
+  { key:'shadow_weavile',        name:'Shadow Weavile',               tier:'A',  types:['Dark','Ice'],        tags:['shadow'] },
+  { key:'mega_salamence',        name:'Mega Salamence',               tier:'A',  types:['Dragon','Flying'],   tags:['mega'] },
+  { key:'shadow_crawdaunt',      name:'Shadow Crawdaunt',             tier:'A',  types:['Dark','Water'],      tags:['shadow'] },
+  { key:'shadow_absol',          name:'Shadow Absol',                 tier:'A',  types:['Dark'],              tags:['shadow'] },
+  { key:'mega_banette',          name:'Mega Banette',                 tier:'A',  types:['Ghost'],             tags:['mega'] },
+  { key:'tyranitar',             name:'Tyranitar',                    tier:'A',  types:['Dark','Rock'],       tags:[] },
+  { key:'shadow_hariyama',       name:'Shadow Hariyama',              tier:'A',  types:['Fighting'],          tags:['shadow'] },
+  { key:'shadow_sceptile',       name:'Shadow Sceptile',              tier:'A',  types:['Grass'],             tags:['shadow'] },
+  { key:'shadow_entei',          name:'Shadow Entei',                 tier:'A',  types:['Fire'],              tags:['shadow'] },
+  { key:'mega_houndoom',         name:'Mega Houndoom',                tier:'A',  types:['Dark','Fire'],       tags:['mega'] },
+  { key:'mega_swampert',         name:'Mega Swampert',                tier:'A',  types:['Ground','Water'],    tags:['mega'] },
+  { key:'mega_heracross',        name:'Mega Heracross',               tier:'A',  types:['Bug','Fighting'],    tags:['mega'] },
+  { key:'shadow_aerodactyl',     name:'Shadow Aerodactyl',            tier:'A',  types:['Flying','Rock'],     tags:['shadow'] },
+  { key:'mewtwo',                name:'Mewtwo',                       tier:'A',  types:['Psychic'],           tags:[] },
+  { key:'shadow_zapdos',         name:'Shadow Zapdos',                tier:'A',  types:['Electric','Flying'], tags:['shadow'] },
+  { key:'mega_aerodactyl',       name:'Mega Aerodactyl',              tier:'A',  types:['Flying','Rock'],     tags:['mega'] },
+  { key:'mega_alakazam',         name:'Mega Alakazam',                tier:'A',  types:['Psychic'],           tags:['mega'] },
+  { key:'mega_pidgeot',          name:'Mega Pidgeot',                 tier:'A',  types:['Flying','Normal'],   tags:['mega'] },
+  { key:'mega_venusaur',         name:'Mega Venusaur',                tier:'A',  types:['Grass','Poison'],    tags:['mega'] },
+  // ---- B+ TIER ----
+  { key:'mega_falinks',          name:'Mega Falinks',                 tier:'B+', types:['Fighting'],          tags:['mega'] },
+  { key:'mega_victreebel',       name:'Mega Victreebel',              tier:'B+', types:['Grass','Poison'],    tags:['mega'] },
+  { key:'shadow_tornadus_i',     name:'Shadow Tornadus (Incarnate)', tier:'B+', types:['Flying'],            tags:['shadow'] },
+  { key:'shadow_aurorus',        name:'Shadow Aurorus',               tier:'B+', types:['Ice','Rock'],        tags:['shadow'] },
+  { key:'shadow_samurott',       name:'Shadow Samurott',              tier:'B+', types:['Water'],             tags:['shadow'] },
+  { key:'shadow_annihilape',     name:'Shadow Annihilape',            tier:'B+', types:['Fighting','Ghost'],  tags:['shadow'] },
+  { key:'shadow_tangrowth',      name:'Shadow Tangrowth',             tier:'B+', types:['Grass'],             tags:['shadow'] },
+  { key:'shadow_roserade',       name:'Shadow Roserade',              tier:'B+', types:['Grass','Poison'],    tags:['shadow'] },
+  { key:'shadow_mismagius',      name:'Shadow Mismagius',             tier:'B+', types:['Ghost'],             tags:['shadow'] },
+  { key:'nihilego',              name:'Nihilego',                     tier:'B+', types:['Poison','Rock'],     tags:[] },
+  { key:'zarude',                name:'Zarude',                       tier:'B+', types:['Dark','Grass'],      tags:[] },
+  { key:'mega_charizard_x',      name:'Mega Charizard X',            tier:'B+', types:['Dragon','Fire'],     tags:['mega'] },
+  { key:'shadow_entei_b',        name:'Entei (Shadow)',               tier:'B+', types:['Fire'],              tags:['shadow'] },
+  { key:'xerneas',               name:'Xerneas',                      tier:'B+', types:['Fairy'],             tags:[] },
+  { key:'mega_lopunny',          name:'Mega Lopunny',                 tier:'B+', types:['Fighting','Normal'], tags:['mega'] },
+  { key:'shadow_articuno',       name:'Shadow Articuno',              tier:'B+', types:['Flying','Ice'],      tags:['shadow'] },
+  { key:'enamorus_therian',      name:'Enamorus (Therian)',           tier:'B+', types:['Fairy','Flying'],    tags:[] },
+  { key:'shadow_electabuzz',     name:'Shadow Electivire',            tier:'B+', types:['Electric'],          tags:['shadow'] },
+  { key:'mega_steelix',          name:'Mega Steelix',                 tier:'B+', types:['Ground','Steel'],    tags:['mega'] },
+  { key:'kyogre',                name:'Kyogre',                       tier:'B+', types:['Water'],             tags:[] },
+  { key:'origin_dialga',         name:'Dialga',                       tier:'B+', types:['Dragon','Steel'],    tags:[] },
+  { key:'excadrill',             name:'Excadrill',                    tier:'B+', types:['Ground','Steel'],    tags:[] },
+  { key:'shadow_alakazam',       name:'Shadow Alakazam',              tier:'B+', types:['Psychic'],           tags:['shadow'] },
+  { key:'shadow_victreebel',     name:'Shadow Victreebel',            tier:'B+', types:['Grass','Poison'],    tags:['shadow'] },
+  { key:'mega_ampharos',         name:'Mega Ampharos',                tier:'B+', types:['Dragon','Electric'], tags:['mega'] },
+  { key:'shadow_piloswine',      name:'Shadow Piloswine',             tier:'B+', types:['Ice','Ground'],      tags:['shadow'] },
+  { key:'shadow_porygon_z',      name:'Shadow Porygon-Z',             tier:'B+', types:['Normal'],            tags:['shadow'] },
+  { key:'mega_beedrill',         name:'Mega Beedrill',                tier:'B+', types:['Bug','Poison'],      tags:['mega'] },
+  { key:'mega_scizor',           name:'Mega Scizor',                  tier:'B+', types:['Bug','Steel'],       tags:['mega'] },
+];
+
+// eDPS stats from Dittobase (June 2026) — top 40 hardcoded, rest link out
+const ATK_STATS = {
+  mega_rayquaza:       { eDPS:24.07, TDO:472.6, fast:'Dragon Tail',   charged:'Dragon Ascent',    eliteCharged:false },
+  mega_mewtwo_y:       { eDPS:20.45, TDO:420.9, fast:'Psycho Cut',    charged:'Psystrike',         eliteCharged:true  },
+  eternatus:           { eDPS:19.78, TDO:415.6, fast:'Dragon Tail',   charged:'Dynamax Cannon',   eliteCharged:false },
+  mega_mewtwo_x:       { eDPS:19.57, TDO:393.9, fast:'Psycho Cut',    charged:'Psystrike',         eliteCharged:true  },
+  white_kyurem:        { eDPS:19.45, TDO:361.3, fast:'Ice Fang',      charged:'Ice Burn',          eliteCharged:false },
+  black_kyurem:        { eDPS:19.42, TDO:360.5, fast:'Dragon Tail',   charged:'Freeze Shock',     eliteCharged:false },
+  dawn_wings_necrozma: { eDPS:19.25, TDO:354.4, fast:'Psycho Cut',    charged:'Moongeist Beam',   eliteCharged:false },
+  zamazenta_crowned:   { eDPS:19.04, TDO:425.4, fast:'Metal Claw',    charged:'Behemoth Bash',    eliteCharged:false },
+  mega_garchomp:       { eDPS:18.50, TDO:396.2, fast:'Dragon Tail',   charged:'Breaking Swipe',   eliteCharged:false },
+  primal_groudon:      { eDPS:18.24, TDO:422.0, fast:'Mud Shot',      charged:'Precipice Blades', eliteCharged:false },
+  mega_gengar:         { eDPS:18.24, TDO:252.8, fast:'Lick',          charged:'Shadow Ball',      eliteCharged:false },
+  mega_blaziken:       { eDPS:18.18, TDO:259.6, fast:'Fire Spin',     charged:'Aura Sphere',      eliteCharged:false },
+  mega_charizard_y:    { eDPS:18.11, TDO:305.1, fast:'Fire Spin',     charged:'Blast Burn',       eliteCharged:true  },
+  primal_kyogre:       { eDPS:17.12, TDO:399.1, fast:'Waterfall',     charged:'Origin Pulse',     eliteCharged:false },
+  mega_lucario:        { eDPS:17.50, TDO:238.4, fast:'Force Palm',    charged:'Aura Sphere',      eliteCharged:false },
+  mega_tyranitar:      { eDPS:17.38, TDO:422.6, fast:'Smack Down',    charged:'Brutal Swing',     eliteCharged:false },
+  dusk_mane_necrozma:  { eDPS:17.19, TDO:313.3, fast:'Psycho Cut',    charged:'Sunsteel Strike',  eliteCharged:false },
+  zacian_crowned:      { eDPS:17.70, TDO:337.8, fast:'Metal Claw',    charged:'Behemoth Blade',   eliteCharged:false },
+  shadow_mewtwo:       { eDPS:16.50, TDO:218.0, fast:'Psycho Cut',    charged:'Psystrike',         eliteCharged:true  },
+  shadow_salamence:    { eDPS:17.79, TDO:241.7, fast:'Dragon Tail',   charged:'Fly',               eliteCharged:false },
+  shadow_reshiram:     { eDPS:16.20, TDO:280.0, fast:'Fire Fang',     charged:'Fusion Flare',     eliteCharged:false },
+  shadow_groudon:      { eDPS:15.80, TDO:310.0, fast:'Mud Shot',      charged:'Precipice Blades', eliteCharged:false },
+  shadow_dialga:       { eDPS:15.60, TDO:340.0, fast:'Dragon Breath', charged:'Roar of Time',     eliteCharged:false },
+  shadow_palkia:       { eDPS:15.40, TDO:290.0, fast:'Dragon Tail',   charged:'Spacial Rend',     eliteCharged:false },
+  shadow_heatran:      { eDPS:15.20, TDO:295.0, fast:'Fire Spin',     charged:'Magma Storm',      eliteCharged:false },
+  shadow_rampardos:    { eDPS:15.80, TDO:138.0, fast:'Smack Down',    charged:'Rock Slide',       eliteCharged:false },
+  mega_diancie:        { eDPS:16.10, TDO:288.0, fast:'Rock Throw',    charged:'Diamond Storm',    eliteCharged:false },
+  rayquaza:            { eDPS:17.40, TDO:275.6, fast:'Dragon Tail',   charged:'Dragon Ascent',    eliteCharged:false },
+  shadow_garchomp:     { eDPS:16.64, TDO:272.6, fast:'Dragon Tail',   charged:'Breaking Swipe',   eliteCharged:false },
+  terrakion:           { eDPS:14.80, TDO:285.0, fast:'Double Kick',   charged:'Sacred Sword',     eliteCharged:false },
+  lucario:             { eDPS:14.60, TDO:198.0, fast:'Counter',       charged:'Aura Sphere',      eliteCharged:false },
+  shadow_tyranitar:    { eDPS:14.90, TDO:240.0, fast:'Smack Down',    charged:'Stone Edge',       eliteCharged:false },
+  shadow_gengar:       { eDPS:15.20, TDO:148.0, fast:'Lick',          charged:'Shadow Ball',      eliteCharged:false },
+  shadow_machamp:      { eDPS:13.80, TDO:192.0, fast:'Counter',       charged:'Dynamic Punch',    eliteCharged:false },
+  mewtwo:              { eDPS:14.20, TDO:252.0, fast:'Psycho Cut',    charged:'Psystrike',         eliteCharged:true  },
+  shadow_mamoswine:    { eDPS:14.50, TDO:215.0, fast:'Powder Snow',   charged:'Avalanche',        eliteCharged:false },
+  shadow_electivire:   { eDPS:14.10, TDO:190.0, fast:'Thunder Shock', charged:'Wild Charge',      eliteCharged:false },
+  kartana:             { eDPS:15.30, TDO:162.0, fast:'Razor Leaf',    charged:'Leaf Blade',       eliteCharged:false },
+  reshiram:            { eDPS:14.80, TDO:280.0, fast:'Fire Fang',     charged:'Fusion Flare',     eliteCharged:false },
+  zekrom:              { eDPS:14.60, TDO:298.0, fast:'Charge Beam',   charged:'Fusion Bolt',      eliteCharged:false },
+};
+
+const DITTOBASE_URL = (key) => `https://www.dittobase.com/pokemon-go/pokedex/${key.replace(/_/g,'-')}`;
+
+
+const TYPE_COLORS = {
+  Normal:'#9099A1', Fire:'#FF9741', Water:'#3692DC', Electric:'#FAC000',
+  Grass:'#38BF4B',  Ice:'#39C6C0',  Fighting:'#CC3F2E', Poison:'#AB40A2',
+  Ground:'#D97845', Flying:'#8FA8DD', Psychic:'#DF2179', Bug:'#749C0F',
+  Rock:'#B6A136',   Ghost:'#70559B', Dragon:'#6B35FF',  Dark:'#4F4747',
+  Steel:'#5A8A8A',  Fairy:'#EF71EF',
+};
+
+const TIER_META = {
+  'S':  { label:'S Tier',  color:'var(--red)',    desc:'The apex. Power these up first.' },
+  'A+': { label:'A+ Tier', color:'var(--orange)', desc:'Near the top of their types. Extremely versatile.' },
+  'A':  { label:'A Tier',  color:'var(--gold)',   desc:'Gold-standard attackers. Priority investments.' },
+  'B+': { label:'B+ Tier', color:'var(--blue)',   desc:'Strong options, slightly outclassed by higher tiers.' },
+  'B':  { label:'B Tier',  color:'var(--text2)',  desc:'Solid budget options.' },
+};
+
+let atkView = 'tier';
+let atkTypeFilter = 'all';
+
+function setAtkView(v, el) {
+  atkView = v;
+  document.querySelectorAll('#av-tier,#av-type').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.getElementById('atk-type-pills').style.display = v === 'type' ? 'flex' : 'none';
+  renderAttackers();
+}
+
+// Open modal to add or edit a copy of a species
+function openAttackerModal(key, copyId) {
+  const atk = ATTACKERS.find(a => a.key === key);
+  if (!atk) return;
+  const stats = ATK_STATS[key];
+  document.getElementById('atk-modal-title').textContent = copyId ? 'Edit copy' : 'Add copy';
+  document.getElementById('atk-modal-key').value = key;
+  document.getElementById('atk-modal-copy-id').value = copyId || '';
+  document.getElementById('atk-modal-species').textContent = atk.name;
+
+  // Pre-fill with existing data or defaults from stats
+  const copies = DB.attackers[key] || [];
+  const existing = copyId ? copies.find(c => c.id === copyId) : null;
+
+  document.getElementById('atk-cp').value          = existing?.cp       || '';
+  document.getElementById('atk-level').value        = existing?.level    || '';
+  document.getElementById('atk-iv-atk').value       = existing?.ivAtk    ?? '';
+  document.getElementById('atk-iv-def').value       = existing?.ivDef    ?? '';
+  document.getElementById('atk-iv-hp').value        = existing?.ivHp     ?? '';
+  document.getElementById('atk-shadow').checked     = existing?.shadow   || false;
+  document.getElementById('atk-purified').checked   = existing?.purified || false;
+  document.getElementById('atk-fast-move').value    = existing?.fastMove    || stats?.fast    || '';
+  document.getElementById('atk-charged-move').value = existing?.chargedMove || stats?.charged || '';
+  document.getElementById('atk-elite-fast').checked    = existing?.eliteFast    || false;
+  document.getElementById('atk-elite-charged').checked = existing?.eliteCharged || (stats?.eliteCharged && !existing) || false;
+  document.getElementById('atk-notes-modal').value  = existing?.notes || '';
+
+  document.getElementById('modal-attacker').classList.add('open');
+}
+
+function saveAttackerCopy() {
+  const key    = document.getElementById('atk-modal-key').value;
+  const copyId = document.getElementById('atk-modal-copy-id').value;
+  if (!key) return;
+
+  const copy = {
+    id:            copyId || uid(),
+    cp:            parseInt(document.getElementById('atk-cp').value)     || null,
+    level:         parseFloat(document.getElementById('atk-level').value) || null,
+    ivAtk:         parseInt(document.getElementById('atk-iv-atk').value) ?? null,
+    ivDef:         parseInt(document.getElementById('atk-iv-def').value) ?? null,
+    ivHp:          parseInt(document.getElementById('atk-iv-hp').value)  ?? null,
+    shadow:        document.getElementById('atk-shadow').checked,
+    purified:      document.getElementById('atk-purified').checked,
+    fastMove:      document.getElementById('atk-fast-move').value.trim(),
+    chargedMove:   document.getElementById('atk-charged-move').value.trim(),
+    eliteFast:     document.getElementById('atk-elite-fast').checked,
+    eliteCharged:  document.getElementById('atk-elite-charged').checked,
+    notes:         document.getElementById('atk-notes-modal').value.trim(),
+  };
+
+  if (!DB.attackers) DB.attackers = {};
+  if (!DB.attackers[key]) DB.attackers[key] = [];
+
+  if (copyId) {
+    const idx = DB.attackers[key].findIndex(c => c.id === copyId);
+    if (idx >= 0) DB.attackers[key][idx] = copy;
+  } else {
+    DB.attackers[key].push(copy);
+  }
+
+  saveDB();
+  closeModal('modal-attacker');
+  renderAttackers();
+  toast('Saved');
+}
+
+function deleteAttackerCopy(key, copyId, el) {
+  confirmDelete(el, 'this copy', () => {
+    if (!DB.attackers?.[key]) return;
+    DB.attackers[key] = DB.attackers[key].filter(c => c.id !== copyId);
+    if (!DB.attackers[key].length) delete DB.attackers[key];
+    saveDB();
+    renderAttackers();
+  });
+}
+
+// IV% helper: (ATK+DEF+HP) / 45 * 100
+function ivPct(ivAtk, ivDef, ivHp) {
+  if (ivAtk == null || ivDef == null || ivHp == null) return null;
+  return Math.round(((ivAtk + ivDef + ivHp) / 45) * 100);
+}
+
+function renderAttackers() {
+  if (!DB.attackers) DB.attackers = {};
+  const search    = (document.getElementById('atk-search')?.value || '').toLowerCase();
+  const ownedOnly = document.getElementById('atk-owned-only')?.checked;
+
+  let list = ATTACKERS;
+  if (search)    list = list.filter(a => a.name.toLowerCase().includes(search) || a.types.some(t => t.toLowerCase().includes(search)));
+  if (ownedOnly) list = list.filter(a => (DB.attackers[a.key]?.length || 0) > 0);
+
+  // Stats
+  const totalAtk    = ATTACKERS.length;
+  const ownedCount  = ATTACKERS.filter(a => (DB.attackers[a.key]?.length||0) > 0).length;
+  const sTierOwned  = ATTACKERS.filter(a => a.tier==='S'  && (DB.attackers[a.key]?.length||0)>0).length;
+  const sTierTotal  = ATTACKERS.filter(a => a.tier==='S').length;
+  const apTierOwned = ATTACKERS.filter(a => a.tier==='A+' && (DB.attackers[a.key]?.length||0)>0).length;
+  const apTierTotal = ATTACKERS.filter(a => a.tier==='A+').length;
+
+  document.getElementById('atk-subtitle').textContent =
+    `${ownedCount} / ${totalAtk} species owned`;
+
+  document.getElementById('atk-stats').innerHTML = [
+    { label:'Species owned',  val:`${ownedCount} / ${totalAtk}`,    color:'blue'   },
+    { label:'S-tier',         val:`${sTierOwned} / ${sTierTotal}`,  color:'red'    },
+    { label:'A+ tier',        val:`${apTierOwned} / ${apTierTotal}`,color:'orange' },
+    { label:'Coverage',       val:`${Math.round((ownedCount/totalAtk)*100)}%`, color:'green' },
+  ].map(s => `<div class="stat-card"><div class="stat-label">${s.label}</div><div class="stat-value ${s.color}">${s.val}</div></div>`).join('');
+
+  // Build a single attacker card
+  const atkCard = (a) => {
+    const copies  = DB.attackers[a.key] || [];
+    const stats   = ATK_STATS[a.key];
+    const hasCopies = copies.length > 0;
+    const hasShadow = copies.some(c => c.shadow);
+
+    const typeChips = a.types.map(t =>
+      `<span class="atk-type-chip" style="background:${TYPE_COLORS[t]}22;color:${TYPE_COLORS[t]};border:1px solid ${TYPE_COLORS[t]}55;">${t}</span>`
+    ).join('');
+
+    const tags = [
+      a.tags.includes('shadow') ? '<span class="atk-tag-shadow">Shadow</span>' : '',
+      a.tags.includes('mega')   ? '<span class="atk-tag-mega">Mega</span>'     : '',
+      a.tags.includes('primal') ? '<span class="atk-tag-mega">Primal</span>'   : '',
+    ].filter(Boolean).join(' ');
+
+    // eDPS stats block
+    const statsBlock = stats ? `
+      <div class="atk-stats-row">
+        <div class="atk-stat"><span style="font-size:10px;color:var(--text3);">eDPS</span><span class="atk-stat-val" style="color:var(--green);">${stats.eDPS}</span></div>
+        <div class="atk-stat"><span style="font-size:10px;color:var(--text3);">TDO</span><span class="atk-stat-val">${stats.TDO}</span></div>
+        <div class="atk-moveset">${stats.fast} / <span class="${stats.eliteCharged?'elite':''}">${stats.charged}${stats.eliteCharged?' ✦':''}</span></div>
+      </div>` : `<a href="${DITTOBASE_URL(a.key)}" target="_blank" style="font-size:11px;color:var(--blue);">Stats on Dittobase ↗</a>`;
+
+    // Copy rows
+    const copyRows = copies.map(c => {
+      const pct  = ivPct(c.ivAtk, c.ivDef, c.ivHp);
+      const ivStr = pct !== null ? `${pct}% IV` : '';
+      const lvlStr = c.level ? `Lvl ${c.level}` : '';
+      const cpStr  = c.cp    ? `${c.cp.toLocaleString()} CP` : '';
+      const main   = [cpStr, lvlStr].filter(Boolean).join(' · ');
+      const moveStr = [c.fastMove, c.chargedMove].filter(Boolean).join(' / ');
+      return `<div class="atk-copy-row">
+        <span class="atk-copy-main">${main || 'No stats'}</span>
+        ${ivStr ? `<span class="atk-copy-ivs">${ivStr}</span>` : ''}
+        ${c.shadow   ? '<span class="copy-badge shadow-badge">Shadow</span>'   : ''}
+        ${c.purified ? '<span class="copy-badge purified-badge">Purified</span>' : ''}
+        ${moveStr ? `<span style="font-size:10px;color:var(--text3);flex:1;">${moveStr}${c.eliteCharged?' ✦':''}</span>` : '<span style="flex:1;"></span>'}
+        ${c.notes ? `<span class="atk-copy-note" title="${c.notes}">${c.notes}</span>` : ''}
+        <button class="btn sm" style="flex-shrink:0;" onclick="openAttackerModal('${a.key}','${c.id}')">✎</button>
+        <button class="btn sm danger" style="flex-shrink:0;" onclick="deleteAttackerCopy('${a.key}','${c.id}',this)">✕</button>
+      </div>`;
+    }).join('');
+
+    return `<div class="atk-card ${hasCopies?'has-copies':''} ${hasShadow?'has-shadow':''}">
+      <div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;">
+          <div>
+            <div class="atk-name">${a.name}</div>
+            ${tags ? `<div style="margin-top:2px;">${tags}</div>` : ''}
+          </div>
+          <span class="badge" style="font-size:10px;flex-shrink:0;${a.tier==='S'?'background:var(--red-bg);color:var(--red);':a.tier==='A+'?'background:var(--orange-bg);color:var(--orange);':a.tier==='A'?'background:var(--gold-bg);color:var(--gold);':'background:var(--blue-bg);color:var(--blue);'}">${a.tier}</span>
+        </div>
+        <div class="atk-types" style="margin-top:6px;">${typeChips}</div>
+      </div>
+      ${statsBlock}
+      ${copyRows ? `<div class="atk-copies">${copyRows}</div>` : ''}
+      <button class="atk-add-btn" onclick="openAttackerModal('${a.key}',null)">＋ Add copy</button>
+    </div>`;
+  };
+
+  // Render by tier
+  if (atkView === 'tier') {
+    const tiers = ['S','A+','A','B+'];
+    document.getElementById('attackers-list').innerHTML = tiers.map(t => {
+      const group = list.filter(a => a.tier === t);
+      if (!group.length) return '';
+      const meta = TIER_META[t];
+      const ownedInTier = group.filter(a => (DB.attackers[a.key]?.length||0)>0).length;
+      return `<div class="atk-tier-label atk-tier-${t.replace('+','p')}">
+          <span class="atk-tier-badge">${meta.label}</span>
+          <span style="color:var(--text3);font-weight:400;font-size:10px;">${ownedInTier}/${group.length} owned · ${meta.desc}</span>
+        </div>
+        <div class="atk-grid">${group.map(atkCard).join('')}</div>`;
+    }).join('');
+  } else {
+    // By type
+    const allTypes = [...new Set(ATTACKERS.flatMap(a => a.types))].sort();
+    const pillsEl = document.getElementById('atk-type-pills');
+    if (pillsEl && !pillsEl.children.length) {
+      pillsEl.innerHTML = ['all',...allTypes].map(t =>
+        `<button class="filter-pill${t==='all'?' active':''}" onclick="setAtkTypeFilter('${t}',this)">${t==='all'?'All':t}</button>`
+      ).join('');
+    }
+    const filtered = atkTypeFilter === 'all' ? list : list.filter(a => a.types.includes(atkTypeFilter));
+    if (!filtered.length) {
+      document.getElementById('attackers-list').innerHTML = `<div style="color:var(--text3);font-size:13px;padding:12px 0;">No attackers match.</div>`;
+      return;
+    }
+    const byType = atkTypeFilter === 'all'
+      ? allTypes.reduce((acc,t) => { acc[t] = filtered.filter(a=>a.types.includes(t)); return acc; }, {})
+      : { [atkTypeFilter]: filtered };
+    document.getElementById('attackers-list').innerHTML = Object.entries(byType)
+      .filter(([,rows]) => rows.length)
+      .map(([t,rows]) => {
+        const color = TYPE_COLORS[t] || 'var(--text2)';
+        const ownedInType = rows.filter(a=>(DB.attackers[a.key]?.length||0)>0).length;
+        return `<div class="type-section-label">
+          <span style="background:${color}22;color:${color};border:1px solid ${color}55;padding:2px 10px;border-radius:99px;">${t}</span>
+          <span style="font-weight:400;font-size:10px;">${ownedInType}/${rows.length} owned</span>
+        </div>
+        <div class="atk-grid">${rows.map(atkCard).join('')}</div>`;
+      }).join('');
+  }
+}
+
+function setAtkTypeFilter(t, el) {
+  atkTypeFilter = t;
+  document.querySelectorAll('#atk-type-pills .filter-pill').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderAttackers();
+}
+
+
+
 
 // Medal database sourced from Bulbapedia + Sportskeeda (June 2026)
 // tiers: [bronze, silver, gold, platinum] — null means no platinum
@@ -3174,7 +3782,7 @@ function showPage(p) {
   document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
   document.getElementById('page-' + p).classList.add('active');
-  document.querySelectorAll('.nav-btn')[['home','dex','spending','xp','medals','raids','events','journal','analytics','manage'].indexOf(p)].classList.add('active');
+  document.querySelectorAll('.nav-btn')[['home','dex','spending','xp','medals','raids','attackers','events','journal','analytics','manage'].indexOf(p)].classList.add('active');
   currentPage = p;
   if (p === 'home') renderDashboard();
   if (p === 'dex') renderDex();
@@ -3182,6 +3790,7 @@ function showPage(p) {
   if (p === 'xp') renderXP();
   if (p === 'medals') renderMedals();
   if (p === 'raids') renderRaids();
+  if (p === 'attackers') renderAttackers();
   if (p === 'events') renderEvents();
   if (p === 'journal') renderJournal();
   if (p === 'analytics') renderAnalytics();
