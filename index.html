@@ -247,6 +247,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 /* ATTACKERS */
 .atk-tier-label { font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin:14px 0 8px; display:flex;align-items:center;gap:8px; }
 .atk-tier-label .atk-tier-badge { padding:2px 10px;border-radius:99px;font-size:12px;font-weight:800; }
+.atk-tier-Sp .atk-tier-badge { background:rgba(244,91,91,0.2); color:#ff4444; border:2px solid rgba(244,91,91,0.7); text-shadow:0 0 8px rgba(244,91,91,0.6); }
 .atk-tier-S  .atk-tier-badge { background:var(--red-bg);    color:var(--red);    border:1px solid rgba(244,91,91,0.4); }
 .atk-tier-Ap .atk-tier-badge { background:var(--orange-bg); color:var(--orange); border:1px solid rgba(251,146,60,0.4); }
 .atk-tier-A  .atk-tier-badge { background:var(--gold-bg);   color:var(--gold);   border:1px solid rgba(245,166,35,0.4); }
@@ -2921,6 +2922,18 @@ function evPopulateModal() {
 // tier: S | A+ | A | B+ | B
 // tags: shadow, mega, primal, origin, crowned, forme
 const ATTACKERS = [
+  // ---- S+ TIER (new — carved from top of old S) ----
+  { key:'zamazenta_crowned',     name:'Zamazenta (Crowned Shield)',   tier:'S+', types:['Fighting','Steel'],  tags:[] },
+  { key:'zacian_crowned',        name:'Zacian (Crowned Sword)',       tier:'S+', types:['Fairy','Steel'],     tags:[] },
+  { key:'eternatus',             name:'Eternatus',                    tier:'S+', types:['Dragon','Poison'],   tags:[] },
+  { key:'dusk_mane_necrozma',    name:'Dusk Mane Necrozma',          tier:'S+', types:['Psychic','Steel'],   tags:[] },
+  { key:'dawn_wings_necrozma',   name:'Dawn Wings Necrozma',         tier:'S+', types:['Ghost','Psychic'],   tags:[] },
+  { key:'white_kyurem',          name:'White Kyurem',                 tier:'S+', types:['Dragon','Ice'],      tags:[] },
+  { key:'primal_groudon',        name:'Primal Groudon',              tier:'S+', types:['Ground','Fire'],     tags:['primal'] },
+  { key:'primal_kyogre',         name:'Primal Kyogre',               tier:'S+', types:['Water'],             tags:['primal'] },
+  { key:'mega_rayquaza',         name:'Mega Rayquaza',                tier:'S+', types:['Dragon','Flying'],   tags:['mega'] },
+  { key:'mega_lucario',          name:'Mega Lucario',                 tier:'S+', types:['Fighting','Steel'],  tags:['mega'] },
+  { key:'mega_mewtwo_y',         name:'Mega Mewtwo Y',               tier:'S+', types:['Psychic'],           tags:['mega'] },
   // ---- S TIER ----
   { key:'shadow_reshiram',       name:'Shadow Reshiram',              tier:'S',  types:['Dragon','Fire'],     tags:['shadow'] },
   { key:'keldeo_resolute',       name:'Keldeo (Resolute)',            tier:'S',  types:['Fighting','Water'],  tags:[] },
@@ -2929,22 +2942,11 @@ const ATTACKERS = [
   { key:'shadow_heatran',        name:'Shadow Heatran',               tier:'S',  types:['Fire','Steel'],      tags:['shadow'] },
   { key:'shadow_groudon',        name:'Shadow Groudon',               tier:'S',  types:['Ground'],            tags:['shadow'] },
   { key:'mega_diancie',          name:'Mega Diancie',                 tier:'S',  types:['Fairy','Rock'],      tags:['mega'] },
-  { key:'zamazenta_crowned',     name:'Zamazenta (Crowned Shield)',   tier:'S',  types:['Fighting','Steel'],  tags:[] },
-  { key:'zacian_crowned',        name:'Zacian (Crowned Sword)',       tier:'S',  types:['Fairy','Steel'],     tags:[] },
-  { key:'eternatus',             name:'Eternatus',                    tier:'S',  types:['Dragon','Poison'],   tags:[] },
   { key:'blacephalon',           name:'Blacephalon',                  tier:'S',  types:['Fire','Ghost'],      tags:[] },
-  { key:'dusk_mane_necrozma',    name:'Dusk Mane Necrozma',          tier:'S',  types:['Psychic','Steel'],   tags:[] },
-  { key:'dawn_wings_necrozma',   name:'Dawn Wings Necrozma',         tier:'S',  types:['Ghost','Psychic'],   tags:[] },
-  { key:'white_kyurem',          name:'White Kyurem',                 tier:'S',  types:['Dragon','Ice'],      tags:[] },
   { key:'black_kyurem',          name:'Black Kyurem',                 tier:'S',  types:['Dragon','Ice'],      tags:[] },
   { key:'shadow_rampardos',      name:'Shadow Rampardos',             tier:'S',  types:['Rock'],              tags:['shadow'] },
-  { key:'primal_groudon',        name:'Primal Groudon',              tier:'S',  types:['Ground','Fire'],     tags:['primal'] },
   { key:'shadow_salamence',      name:'Shadow Salamence',             tier:'S',  types:['Dragon','Flying'],   tags:['shadow'] },
-  { key:'primal_kyogre',         name:'Primal Kyogre',               tier:'S',  types:['Water'],             tags:['primal'] },
-  { key:'mega_rayquaza',         name:'Mega Rayquaza',                tier:'S',  types:['Dragon','Flying'],   tags:['mega'] },
-  { key:'mega_lucario',          name:'Mega Lucario',                 tier:'S',  types:['Fighting','Steel'],  tags:['mega'] },
   { key:'mega_blaziken',         name:'Mega Blaziken',                tier:'S',  types:['Fighting','Fire'],   tags:['mega'] },
-  { key:'mega_mewtwo_y',         name:'Mega Mewtwo Y',               tier:'S',  types:['Psychic'],           tags:['mega'] },
   { key:'shadow_mewtwo',         name:'Shadow Mewtwo',                tier:'S',  types:['Psychic'],           tags:['shadow'] },
   { key:'mega_gengar',           name:'Mega Gengar',                  tier:'S',  types:['Ghost','Poison'],    tags:['mega'] },
   { key:'mega_charizard_y',      name:'Mega Charizard Y',            tier:'S',  types:['Fire','Flying'],     tags:['mega'] },
@@ -3060,36 +3062,71 @@ const ATTACKERS = [
   { key:'mega_alakazam',         name:'Mega Alakazam',                tier:'A',  types:['Psychic'],           tags:['mega'] },
   { key:'mega_pidgeot',          name:'Mega Pidgeot',                 tier:'A',  types:['Flying','Normal'],   tags:['mega'] },
   { key:'mega_venusaur',         name:'Mega Venusaur',                tier:'A',  types:['Grass','Poison'],    tags:['mega'] },
-  // ---- B+ TIER ----
+  // ---- B+ TIER (from screenshot — significantly expanded) ----
   { key:'mega_falinks',          name:'Mega Falinks',                 tier:'B+', types:['Fighting'],          tags:['mega'] },
   { key:'mega_victreebel',       name:'Mega Victreebel',              tier:'B+', types:['Grass','Poison'],    tags:['mega'] },
   { key:'shadow_tornadus_i',     name:'Shadow Tornadus (Incarnate)', tier:'B+', types:['Flying'],            tags:['shadow'] },
   { key:'shadow_aurorus',        name:'Shadow Aurorus',               tier:'B+', types:['Ice','Rock'],        tags:['shadow'] },
   { key:'shadow_samurott',       name:'Shadow Samurott',              tier:'B+', types:['Water'],             tags:['shadow'] },
   { key:'shadow_annihilape',     name:'Shadow Annihilape',            tier:'B+', types:['Fighting','Ghost'],  tags:['shadow'] },
-  { key:'shadow_tangrowth',      name:'Shadow Tangrowth',             tier:'B+', types:['Grass'],             tags:['shadow'] },
-  { key:'shadow_roserade',       name:'Shadow Roserade',              tier:'B+', types:['Grass','Poison'],    tags:['shadow'] },
-  { key:'shadow_mismagius',      name:'Shadow Mismagius',             tier:'B+', types:['Ghost'],             tags:['shadow'] },
-  { key:'nihilego',              name:'Nihilego',                     tier:'B+', types:['Poison','Rock'],     tags:[] },
   { key:'zarude',                name:'Zarude',                       tier:'B+', types:['Dark','Grass'],      tags:[] },
-  { key:'mega_charizard_x',      name:'Mega Charizard X',            tier:'B+', types:['Dragon','Fire'],     tags:['mega'] },
-  { key:'shadow_entei_b',        name:'Entei (Shadow)',               tier:'B+', types:['Fire'],              tags:['shadow'] },
+  { key:'pheromosa',             name:'Pheromosa',                    tier:'B+', types:['Bug','Fighting'],    tags:[] },
+  { key:'toucannon',             name:'Toucannon',                    tier:'B+', types:['Flying','Normal'],   tags:[] },
   { key:'xerneas',               name:'Xerneas',                      tier:'B+', types:['Fairy'],             tags:[] },
-  { key:'mega_lopunny',          name:'Mega Lopunny',                 tier:'B+', types:['Fighting','Normal'], tags:['mega'] },
-  { key:'shadow_articuno',       name:'Shadow Articuno',              tier:'B+', types:['Flying','Ice'],      tags:['shadow'] },
-  { key:'enamorus_therian',      name:'Enamorus (Therian)',           tier:'B+', types:['Fairy','Flying'],    tags:[] },
-  { key:'shadow_electabuzz',     name:'Shadow Electivire',            tier:'B+', types:['Electric'],          tags:['shadow'] },
-  { key:'mega_steelix',          name:'Mega Steelix',                 tier:'B+', types:['Ground','Steel'],    tags:['mega'] },
-  { key:'kyogre',                name:'Kyogre',                       tier:'B+', types:['Water'],             tags:[] },
-  { key:'origin_dialga',         name:'Dialga',                       tier:'B+', types:['Dragon','Steel'],    tags:[] },
+  { key:'vikavolt',              name:'Vikavolt',                     tier:'B+', types:['Bug','Electric'],    tags:[] },
+  { key:'meowscarada',           name:'Meowscarada',                  tier:'B+', types:['Dark','Grass'],      tags:[] },
+  { key:'dhelmise',              name:'Dhelmise',                     tier:'B+', types:['Ghost','Grass'],     tags:[] },
+  { key:'dragapult',             name:'Dragapult',                    tier:'B+', types:['Dragon','Ghost'],    tags:[] },
+  { key:'rillaboom',             name:'Rillaboom',                    tier:'B+', types:['Grass'],             tags:[] },
+  { key:'hatterene',             name:'Hatterene',                    tier:'B+', types:['Fairy','Psychic'],   tags:[] },
+  { key:'inteleon',              name:'Inteleon',                     tier:'B+', types:['Water'],             tags:[] },
+  { key:'naganadel',             name:'Naganadel',                    tier:'B+', types:['Dragon','Poison'],   tags:[] },
+  { key:'azelf',                 name:'Azelf',                        tier:'B+', types:['Psychic'],           tags:[] },
+  { key:'gigalith',              name:'Gigalith',                     tier:'B+', types:['Rock'],              tags:[] },
+  { key:'landorus_i',            name:'Landorus (Incarnate)',         tier:'B+', types:['Flying','Ground'],   tags:[] },
+  { key:'regigigas',             name:'Regigigas',                    tier:'B+', types:['Normal'],            tags:[] },
   { key:'excadrill',             name:'Excadrill',                    tier:'B+', types:['Ground','Steel'],    tags:[] },
-  { key:'shadow_alakazam',       name:'Shadow Alakazam',              tier:'B+', types:['Psychic'],           tags:['shadow'] },
-  { key:'shadow_victreebel',     name:'Shadow Victreebel',            tier:'B+', types:['Grass','Poison'],    tags:['shadow'] },
-  { key:'mega_ampharos',         name:'Mega Ampharos',                tier:'B+', types:['Dragon','Electric'], tags:['mega'] },
-  { key:'shadow_piloswine',      name:'Shadow Piloswine',             tier:'B+', types:['Ice','Ground'],      tags:['shadow'] },
-  { key:'shadow_porygon_z',      name:'Shadow Porygon-Z',             tier:'B+', types:['Normal'],            tags:['shadow'] },
-  { key:'mega_beedrill',         name:'Mega Beedrill',                tier:'B+', types:['Bug','Poison'],      tags:['mega'] },
+  { key:'kyurem',                name:'Kyurem',                       tier:'B+', types:['Dragon','Ice'],      tags:[] },
+  { key:'dialga',                name:'Dialga',                       tier:'B+', types:['Dragon','Steel'],    tags:[] },
+  { key:'tyrantrum',             name:'Tyrantrum',                    tier:'B+', types:['Dragon','Rock'],     tags:[] },
+  { key:'shadow_golurk',         name:'Shadow Golurk',                tier:'B+', types:['Ghost','Ground'],    tags:['shadow'] },
+  { key:'greninja',              name:'Greninja',                     tier:'B+', types:['Dark','Water'],      tags:[] },
+  { key:'delphox',               name:'Delphox',                      tier:'B+', types:['Fire','Psychic'],    tags:[] },
+  { key:'galarian_darmanitan',   name:'Galarian Darmanitan',          tier:'B+', types:['Ice'],               tags:[] },
+  { key:'zoroark',               name:'Zoroark',                      tier:'B+', types:['Dark'],              tags:[] },
+  { key:'shadow_unfezant',       name:'Shadow Unfezant',              tier:'B+', types:['Flying','Normal'],   tags:['shadow'] },
+  { key:'darmanitan',            name:'Darmanitan',                   tier:'B+', types:['Fire'],              tags:[] },
+  { key:'hisuian_zoroark',       name:'Hisuian Zoroark',              tier:'B+', types:['Ghost','Normal'],    tags:[] },
+  { key:'glaceon',               name:'Glaceon',                      tier:'B+', types:['Ice'],               tags:[] },
+  { key:'shadow_tangrowth',      name:'Shadow Tangrowth',             tier:'B+', types:['Grass'],             tags:['shadow'] },
+  { key:'kyogre',                name:'Kyogre',                       tier:'B+', types:['Water'],             tags:[] },
+  { key:'shadow_toxicroak',      name:'Shadow Toxicroak',             tier:'B+', types:['Fighting','Poison'], tags:['shadow'] },
+  { key:'electivire',            name:'Electivire',                   tier:'B+', types:['Electric'],          tags:[] },
+  { key:'magnezone',             name:'Magnezone',                    tier:'B+', types:['Electric','Steel'],  tags:[] },
+  { key:'roserade',              name:'Roserade',                     tier:'B+', types:['Grass','Poison'],    tags:[] },
+  { key:'weavile',               name:'Weavile',                      tier:'B+', types:['Dark','Ice'],        tags:[] },
+  { key:'honchkrow',             name:'Honchkrow',                    tier:'B+', types:['Dark','Flying'],     tags:[] },
+  { key:'shadow_luxray',         name:'Shadow Luxray',                tier:'B+', types:['Electric'],          tags:['shadow'] },
+  { key:'staraptor',             name:'Staraptor',                    tier:'B+', types:['Flying','Normal'],   tags:[] },
+  { key:'shadow_empoleon',       name:'Shadow Empoleon',              tier:'B+', types:['Steel','Water'],     tags:['shadow'] },
+  { key:'latios',                name:'Latios',                       tier:'B+', types:['Dragon','Psychic'],  tags:[] },
+  { key:'shadow_infernape',      name:'Shadow Infernape',             tier:'B+', types:['Fighting','Fire'],   tags:['shadow'] },
+  { key:'shadow_torterra',       name:'Shadow Torterra',              tier:'B+', types:['Grass','Ground'],    tags:['shadow'] },
+  { key:'mega_lopunny',          name:'Mega Lopunny',                 tier:'B+', types:['Fighting','Normal'], tags:['mega'] },
+  { key:'mega_gallade',          name:'Mega Gallade',                 tier:'B+', types:['Fighting','Psychic'],tags:['mega'] },
+  { key:'shadow_manectric',      name:'Shadow Manectric',             tier:'B+', types:['Electric'],          tags:['shadow'] },
+  { key:'ho_oh',                 name:'Ho-Oh',                        tier:'B+', types:['Fire','Flying'],     tags:[] },
+  { key:'raikou',                name:'Raikou',                       tier:'B+', types:['Electric'],          tags:[] },
+  { key:'gardevoir',             name:'Gardevoir',                    tier:'B+', types:['Fairy','Psychic'],   tags:[] },
+  { key:'swampert',              name:'Swampert',                     tier:'B+', types:['Ground','Water'],    tags:[] },
+  { key:'breloom',               name:'Breloom',                      tier:'B+', types:['Fighting','Grass'],  tags:[] },
+  { key:'shadow_lugia',          name:'Shadow Lugia',                 tier:'B+', types:['Flying','Psychic'],  tags:['shadow'] },
+  { key:'shadow_granbull',       name:'Shadow Granbull',              tier:'B+', types:['Fairy'],             tags:['shadow'] },
   { key:'mega_scizor',           name:'Mega Scizor',                  tier:'B+', types:['Bug','Steel'],       tags:['mega'] },
+  { key:'shadow_feraligatr',     name:'Shadow Feraligatr',            tier:'B+', types:['Water'],             tags:['shadow'] },
+  { key:'moltres',               name:'Moltres',                      tier:'B+', types:['Fire','Flying'],     tags:[] },
+  { key:'shadow_articuno',       name:'Shadow Articuno',              tier:'B+', types:['Flying','Ice'],      tags:['shadow'] },
+  { key:'mega_ampharos',         name:'Mega Ampharos',                tier:'B+', types:['Dragon','Electric'], tags:['mega'] },
 ];
 
 // eDPS stats from Dittobase (June 2026) — top 40 hardcoded, rest link out
@@ -3148,11 +3185,11 @@ const TYPE_COLORS = {
 };
 
 const TIER_META = {
-  'S':  { label:'S Tier',  color:'var(--red)',    desc:'The apex. Power these up first.' },
+  'S+': { label:'S+ Tier', color:'var(--red)',    desc:'Plainly oppressive. The Ubers of Pokémon GO raid power.' },
+  'S':  { label:'S Tier',  color:'var(--red)',    desc:'At or near the top of the meta. Exceptionally worth investing.' },
   'A+': { label:'A+ Tier', color:'var(--orange)', desc:'Near the top of their types. Extremely versatile.' },
   'A':  { label:'A Tier',  color:'var(--gold)',   desc:'Gold-standard attackers. Priority investments.' },
   'B+': { label:'B+ Tier', color:'var(--blue)',   desc:'Strong options, slightly outclassed by higher tiers.' },
-  'B':  { label:'B Tier',  color:'var(--text2)',  desc:'Solid budget options.' },
 };
 
 let atkView = 'tier';
@@ -3261,6 +3298,8 @@ function renderAttackers() {
   // Stats
   const totalAtk    = ATTACKERS.length;
   const ownedCount  = ATTACKERS.filter(a => (DB.attackers[a.key]?.length||0) > 0).length;
+  const spTierOwned = ATTACKERS.filter(a => a.tier==='S+' && (DB.attackers[a.key]?.length||0)>0).length;
+  const spTierTotal = ATTACKERS.filter(a => a.tier==='S+').length;
   const sTierOwned  = ATTACKERS.filter(a => a.tier==='S'  && (DB.attackers[a.key]?.length||0)>0).length;
   const sTierTotal  = ATTACKERS.filter(a => a.tier==='S').length;
   const apTierOwned = ATTACKERS.filter(a => a.tier==='A+' && (DB.attackers[a.key]?.length||0)>0).length;
@@ -3270,10 +3309,10 @@ function renderAttackers() {
     `${ownedCount} / ${totalAtk} species owned`;
 
   document.getElementById('atk-stats').innerHTML = [
-    { label:'Species owned',  val:`${ownedCount} / ${totalAtk}`,    color:'blue'   },
-    { label:'S-tier',         val:`${sTierOwned} / ${sTierTotal}`,  color:'red'    },
-    { label:'A+ tier',        val:`${apTierOwned} / ${apTierTotal}`,color:'orange' },
-    { label:'Coverage',       val:`${Math.round((ownedCount/totalAtk)*100)}%`, color:'green' },
+    { label:'Species owned', val:`${ownedCount} / ${totalAtk}`,    color:'blue'   },
+    { label:'S+ tier',       val:`${spTierOwned} / ${spTierTotal}`, color:'red'    },
+    { label:'S tier',        val:`${sTierOwned} / ${sTierTotal}`,   color:'red'    },
+    { label:'A+ tier',       val:`${apTierOwned} / ${apTierTotal}`, color:'orange' },
   ].map(s => `<div class="stat-card"><div class="stat-label">${s.label}</div><div class="stat-value ${s.color}">${s.val}</div></div>`).join('');
 
   // Build a single attacker card
@@ -3328,7 +3367,7 @@ function renderAttackers() {
             <div class="atk-name">${a.name}</div>
             ${tags ? `<div style="margin-top:2px;">${tags}</div>` : ''}
           </div>
-          <span class="badge" style="font-size:10px;flex-shrink:0;${a.tier==='S'?'background:var(--red-bg);color:var(--red);':a.tier==='A+'?'background:var(--orange-bg);color:var(--orange);':a.tier==='A'?'background:var(--gold-bg);color:var(--gold);':'background:var(--blue-bg);color:var(--blue);'}">${a.tier}</span>
+          <span class="badge" style="font-size:10px;flex-shrink:0;${a.tier==='S+'?'background:rgba(244,91,91,0.2);color:#ff4444;border:1px solid rgba(244,91,91,0.6);':a.tier==='S'?'background:var(--red-bg);color:var(--red);':a.tier==='A+'?'background:var(--orange-bg);color:var(--orange);':a.tier==='A'?'background:var(--gold-bg);color:var(--gold);':'background:var(--blue-bg);color:var(--blue);'}">${a.tier}</span>
         </div>
         <div class="atk-types" style="margin-top:6px;">${typeChips}</div>
       </div>
@@ -3340,13 +3379,13 @@ function renderAttackers() {
 
   // Render by tier
   if (atkView === 'tier') {
-    const tiers = ['S','A+','A','B+'];
+    const tiers = ['S+','S','A+','A','B+'];
     document.getElementById('attackers-list').innerHTML = tiers.map(t => {
       const group = list.filter(a => a.tier === t);
       if (!group.length) return '';
       const meta = TIER_META[t];
       const ownedInTier = group.filter(a => (DB.attackers[a.key]?.length||0)>0).length;
-      return `<div class="atk-tier-label atk-tier-${t.replace('+','p')}">
+      return `<div class="atk-tier-label atk-tier-${t.replace('+','p').replace('S+','Sp')}">
           <span class="atk-tier-badge">${meta.label}</span>
           <span style="color:var(--text3);font-weight:400;font-size:10px;">${ownedInTier}/${group.length} owned · ${meta.desc}</span>
         </div>
