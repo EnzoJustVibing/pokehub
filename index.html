@@ -459,7 +459,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
       <div class="section-title">Spending tracker</div>
       <div class="section-subtitle">USD → INR gift cards → Pokécoins</div>
     </div>
-    <button class="btn primary" onclick="openModal('modal-giftcard')">+ Gift card</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn" onclick="openModal('modal-inrspend')">+ Direct INR spend</button>
+      <button class="btn primary" onclick="openModal('modal-giftcard')">+ Gift card</button>
+    </div>
   </div>
 
   <div class="balance-row" id="spend-balances"></div>
@@ -494,6 +497,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   <div class="card" style="margin-bottom:14px;">
     <div class="manage-title">Coin purchase log</div>
     <div id="coin-purchase-table"></div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <div class="manage-title" style="margin-bottom:0;">Direct INR spend log</div>
+      <button class="btn sm primary" onclick="openModal('modal-inrspend')">+ Spend</button>
+    </div>
+    <div id="inrspend-table"></div>
   </div>
 
   <div class="card">
@@ -865,6 +876,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         oninput="setINRStarting(this.value)">
       <span style="font-size:12px;color:var(--text3);">Existing INR balance before your first gift card log</span>
     </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px 12px;background:var(--bg3);border-radius:var(--radius);flex-wrap:wrap;">
+      <span style="font-size:13px;color:var(--text);font-weight:500;">USD paid for starting INR:</span>
+      <input type="number" id="inr-starting-usd" min="0" placeholder="0" step="0.01"
+        style="width:120px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;color:var(--text);font-size:13px;"
+        oninput="setINRStartingUSD(this.value)">
+      <span style="font-size:12px;color:var(--text3);">What you paid in USD for the INR balance above — used to calculate total USD spent</span>
+    </div>
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;padding:10px 12px;background:var(--bg3);border-radius:var(--radius);flex-wrap:wrap;">
       <span style="font-size:13px;color:var(--text);font-weight:500;white-space:nowrap;">Trainer starting values:</span>
       <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);">
@@ -955,7 +973,41 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 <!-- ===================== MODALS ===================== -->
 
 <!-- Gift card modal -->
-<div class="modal-overlay" id="modal-giftcard">
+<!-- INR direct spend modal -->
+<div class="modal-overlay" id="modal-inrspend">
+  <div class="modal">
+    <div class="modal-title" id="inrspend-modal-title">Log INR spend</div>
+    <input type="hidden" id="inrspend-edit-id">
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input class="form-input" type="date" id="inrspend-date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Amount (₹)</label>
+        <input class="form-input" type="number" id="inrspend-inr" placeholder="e.g. 179" step="0.01">
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label class="form-label">Category</label>
+        <select class="form-select" id="inrspend-category">
+          <option value="Deluxe GO Pass">Deluxe GO Pass</option>
+          <option value="Event ticket">Event ticket</option>
+          <option value="Custom">Custom</option>
+        </select>
+      </div>
+      <div class="form-group" style="grid-column:1/-1;">
+        <label class="form-label">Notes</label>
+        <input class="form-input" type="text" id="inrspend-notes" placeholder="e.g. GO Fest 2026 ticket">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-inrspend')">Cancel</button>
+      <button class="btn primary" onclick="saveINRSpend()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== GIFT CARD MODAL ===================== -->
   <div class="modal">
     <div class="modal-title">Log gift card purchase</div>
     <div class="form-grid">
@@ -1330,6 +1382,8 @@ let DB = {
   },
   accounts: ['Main', 'Joe', 'Brody'],
   inrStarting: 0,          // one-time INR starting balance
+  inrStartingUSD: 0,       // USD paid for inrStarting balance (for cost attribution)
+  inrSpends: [],           // [{ id, date, inr, category, notes }] — direct INR purchases
   coinStarting: {},         // { accountName: coins } starting coin balance per account
   giftCards: [],            // [{ id, date, usd, inr, notes }]
   coinPurchases: [],        // [{ id, date, account, inr, coins }]
@@ -1487,8 +1541,8 @@ function getRaidsCost(raids) {
 
 // Convenience wrappers used by existing render functions
 function getINRBalance() {
-  const totalINR = (DB.inrStarting || 0) + sumField(DB.giftCards, 'inr');
-  const spentINR = sumField(DB.coinPurchases, 'inr');
+  const totalINR  = (DB.inrStarting || 0) + sumField(DB.giftCards, 'inr');
+  const spentINR  = sumField(DB.coinPurchases, 'inr') + sumField(DB.inrSpends || [], 'inr');
   return totalINR - spentINR;
 }
 function getAcctCoins(acct) {
@@ -1498,7 +1552,20 @@ function getAcctCoins(acct) {
   const spent    = sumCoinsSpent(query('coinSpends', {account: acct}));
   return starting + bought + gym - spent;
 }
-function getTotalUSDSpent() { return sumField(DB.giftCards, 'usd'); }
+function getTotalUSDSpent() {
+  const gcUSD = sumField(DB.giftCards, 'usd');
+  return gcUSD + (DB.inrStartingUSD || 0);
+}
+
+// USD equivalent of direct INR spends, using effective gift card exchange rate
+function getINRSpendUSD() {
+  const totalSpendINR = sumField(DB.inrSpends || [], 'inr');
+  if (!totalSpendINR) return 0;
+  const totalGCInr = sumField(DB.giftCards || [], 'inr') + (DB.inrStarting || 0);
+  const totalUSD   = sumField(DB.giftCards || [], 'usd') + (DB.inrStartingUSD || 0);
+  const usdPerInr  = totalGCInr > 0 ? totalUSD / totalGCInr : 0;
+  return totalSpendINR * usdPerInr;
+}
 function getTotalCoins(acct) {
   return sumField(acct ? query('coinPurchases', {account: acct}) : DB.coinPurchases, 'coins');
 }
@@ -2099,14 +2166,17 @@ let spendAcct = null;
 
 function renderSpending() {
   if (!spendAcct || !DB.accounts.includes(spendAcct)) spendAcct = DB.accounts[0];
-  const inrBal = getINRBalance();
-  const totalUSD = getTotalUSDSpent();
+  const inrBal       = getINRBalance();
+  const totalUSD     = getTotalUSDSpent();
+  const inrSpendUSD  = getINRSpendUSD();
   const eff = getEffCostPerCoin();
   const savings = eff !== null ? Math.round((1 - parseFloat(eff) / US_CENTS_PER_COIN) * 100) : null;
+  const totalDirectINR = sumField(DB.inrSpends || [], 'inr');
 
   document.getElementById('spend-balances').innerHTML = `
     <div class="balance-card"><div class="balance-label">INR balance</div><div class="balance-val" style="color:var(--gold)">₹${inrBal.toLocaleString()}</div><div class="balance-sub">From gift cards</div></div>
-    <div class="balance-card"><div class="balance-label">Total USD spent</div><div class="balance-val" style="color:var(--blue)">$${totalUSD.toFixed(2)}</div><div class="balance-sub">Gift cards</div></div>
+    <div class="balance-card"><div class="balance-label">Total USD spent</div><div class="balance-val" style="color:var(--blue)">$${totalUSD.toFixed(2)}</div><div class="balance-sub">Gift cards incl. starting</div></div>
+    ${totalDirectINR ? `<div class="balance-card"><div class="balance-label">Direct INR spent</div><div class="balance-val" style="color:var(--orange)">₹${totalDirectINR.toLocaleString()}</div><div class="balance-sub">~$${inrSpendUSD.toFixed(2)} USD</div></div>` : ''}
     ${eff ? `<div class="balance-card"><div class="balance-label">Cost per coin</div><div class="balance-val" style="color:var(--green)">¢${eff}</div><div class="balance-sub">vs ¢${US_CENTS_PER_COIN} US rate</div></div>` : ''}
     ${savings !== null ? `<div class="balance-card"><div class="balance-label">Savings vs US</div><div class="balance-val" style="color:var(--green)">${savings}%</div><div class="balance-sub">vs US App Store</div></div>` : ''}
   `;
@@ -2179,6 +2249,23 @@ function renderSpending() {
         <td><button class="btn sm danger" onclick="deleteGymCoins('${g.id}', this)">✕</button></td>
       </tr>`).join('')}</tbody>
     </table>` : `<div style="color:var(--text3);font-size:13px;padding:8px 0;">No gym coins logged for ${spendAcct}.</div>`;
+
+  // Direct INR spend table
+  const inrSpendsSorted = [...(DB.inrSpends||[])].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  document.getElementById('inrspend-table').innerHTML = inrSpendsSorted.length ? `
+    <table class="data-table">
+      <thead><tr><th>Date</th><th>Amount</th><th>Category</th><th>Notes</th><th></th></tr></thead>
+      <tbody>${inrSpendsSorted.map(s=>`<tr>
+        <td>${s.date}</td>
+        <td><span class="badge gold">₹${(s.inr||0).toLocaleString()}</span></td>
+        <td style="color:var(--text2)">${s.category||''}</td>
+        <td style="color:var(--text2)">${s.notes||''}</td>
+        <td style="display:flex;gap:4px;">
+          <button class="btn sm" onclick="editINRSpend('${s.id}')">✎</button>
+          <button class="btn sm danger" onclick="deleteINRSpend('${s.id}',this)">✕</button>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table>` : `<div style="color:var(--text3);font-size:13px;padding:8px 0;">No direct INR spends logged yet.</div>`;
 
   // Gift card table
   const gcs = [...DB.giftCards].sort((a,b)=>new Date(b.date)-new Date(a.date));
@@ -2487,6 +2574,7 @@ function renderManage() {
 
   // INR starting balance
   document.getElementById('inr-starting-val').value = DB.inrStarting || '';
+  document.getElementById('inr-starting-usd').value = DB.inrStartingUSD || '';
   // Trainer starting values
   const ts = DB.trainerStarting || {};
   document.getElementById('trainer-start-xp').value    = DB.xpStarting || '';
@@ -2575,7 +2663,7 @@ function openModal(id) {
     scCat.innerHTML = SPEND_CATEGORIES.map(c => `<option>${c}</option>`).join('');
   }
   // Pre-fill dates
-  ['gc-date','bc-date','sc-date','ev-date','ev-date-end','gym-date','raid-date','set-date','jnl-date'].forEach(f => {
+  ['gc-date','bc-date','sc-date','ev-date','ev-date-end','gym-date','raid-date','set-date','jnl-date','inrspend-date'].forEach(f => {
     const el = document.getElementById(f);
     if (el && !el.value) el.value = today;
   });
@@ -2591,6 +2679,12 @@ function openModal(id) {
     document.getElementById('sc-bundle').checked = false;
     document.getElementById('sc-coins-label').textContent = 'Coins per item';
     document.getElementById('sc-spend-preview').textContent = '';
+  }
+  if (id === 'modal-inrspend') {
+    document.getElementById('inrspend-modal-title').textContent = 'Log INR spend';
+    document.getElementById('inrspend-edit-id').value = '';
+    ['inrspend-inr','inrspend-notes'].forEach(f => { document.getElementById(f).value = ''; });
+    document.getElementById('inrspend-category').value = 'Deluxe GO Pass';
   }
   // Reset journal modal to "add" mode
   if (id === 'modal-journal') {
@@ -3952,6 +4046,54 @@ function deleteEvent(id, el)        { confirmDelete(el, 'this event',         ()
 function setINRStarting(val) {
   DB.inrStarting = parseFloat(val) || 0;
   saveDB(); renderSpending();
+}
+
+function setINRStartingUSD(val) {
+  DB.inrStartingUSD = parseFloat(val) || 0;
+  saveDB(); renderSpending();
+}
+
+function saveINRSpend() {
+  const inr    = parseFloat(document.getElementById('inrspend-inr').value);
+  const date   = document.getElementById('inrspend-date').value;
+  const editId = document.getElementById('inrspend-edit-id').value;
+  if (!inr) { toast('Enter INR amount'); return; }
+  if (!DB.inrSpends) DB.inrSpends = [];
+  const entry = {
+    id:       editId || uid(),
+    date:     date || new Date().toISOString().split('T')[0],
+    inr,
+    category: document.getElementById('inrspend-category').value,
+    notes:    document.getElementById('inrspend-notes').value.trim(),
+  };
+  if (editId) {
+    const idx = DB.inrSpends.findIndex(s => s.id === editId);
+    if (idx >= 0) DB.inrSpends[idx] = entry;
+  } else {
+    DB.inrSpends.push(entry);
+  }
+  saveDB(); closeModal('modal-inrspend'); renderSpending();
+  ['inrspend-inr','inrspend-notes','inrspend-date','inrspend-edit-id'].forEach(f => { document.getElementById(f).value = ''; });
+  toast(editId ? 'Entry updated' : 'INR spend logged');
+}
+
+function editINRSpend(id) {
+  const s = (DB.inrSpends||[]).find(s => s.id === id);
+  if (!s) return;
+  document.getElementById('inrspend-modal-title').textContent = 'Edit INR spend';
+  document.getElementById('inrspend-edit-id').value  = s.id;
+  document.getElementById('inrspend-date').value     = s.date;
+  document.getElementById('inrspend-inr').value      = s.inr;
+  document.getElementById('inrspend-category').value = s.category || 'Deluxe GO Pass';
+  document.getElementById('inrspend-notes').value    = s.notes || '';
+  document.getElementById('modal-inrspend').classList.add('open');
+}
+
+function deleteINRSpend(id, el) {
+  confirmDelete(el, 'this INR spend', () => {
+    DB.inrSpends = (DB.inrSpends||[]).filter(s => s.id !== id);
+    saveDB(); renderSpending();
+  });
 }
 
 function setXPStarting(val) {
