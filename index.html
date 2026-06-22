@@ -312,6 +312,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 /* RAID ADVISOR */
 .advisor-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px; margin-bottom:8px; display:flex; gap:12px; align-items:flex-start; }
 .advisor-card.priority-catch   { border-left:3px solid var(--green);  background:var(--green-bg);  }
+.advisor-card.priority-upgrade { border-left:3px solid var(--gold);   background:var(--gold-bg);   }
 .advisor-card.priority-candy   { border-left:3px solid var(--blue);   background:var(--blue-bg);   }
 .advisor-card.priority-xl      { border-left:3px solid var(--purple); background:var(--purple-bg); }
 .advisor-card.priority-covered { border-left:3px solid var(--border); opacity:0.7; }
@@ -2982,20 +2983,36 @@ function matchBossToAttacker(bossName) {
 }
 
 // Determine priority level for a matched attacker given current copies
+// IV thresholds for "worth upgrading" by tier
+const UPGRADE_IV_THRESHOLD = { 'S+': 91, 'S': 91, 'A+': 80, 'A': 80 };
+
 function getAdvisorPriority(atk, copies) {
-  if (!copies || copies.length === 0) return 'catch'; // don't own any
+  if (!copies || copies.length === 0) return { priority: 'catch', bestIv: null, maxLevel: 0 };
 
   const maxLevel = Math.max(...copies.map(c => parseFloat(c.level) || 0));
   const hasShadow = copies.some(c => c.shadow);
   const wantsShadow = atk.tags.includes('shadow');
 
   // Shadow attacker and no shadow copy owned
-  if (wantsShadow && !hasShadow) return 'catch';
+  if (wantsShadow && !hasShadow) return { priority: 'catch', bestIv: null, maxLevel };
 
-  if (maxLevel === 0) return 'candy';     // owned but no level entered — assume needs work
-  if (maxLevel < 40)  return 'candy';     // definitely needs regular candy
-  if (maxLevel < 50)  return 'xl';        // needs XL candy
-  return 'covered';                        // well built
+  // Best IV% across all relevant copies
+  const relevantCopies = wantsShadow ? copies.filter(c => c.shadow) : copies;
+  const ivPcts = relevantCopies
+    .map(c => ivPct(c.ivAtk, c.ivDef, c.ivHp))
+    .filter(p => p !== null);
+  const bestIv = ivPcts.length ? Math.max(...ivPcts) : null;
+
+  // Upgrade check — only for A tier and above
+  const threshold = UPGRADE_IV_THRESHOLD[atk.tier];
+  if (threshold && bestIv !== null && bestIv < threshold) {
+    return { priority: 'upgrade', bestIv, maxLevel };
+  }
+
+  if (maxLevel === 0) return { priority: 'candy',   bestIv, maxLevel };
+  if (maxLevel < 40)  return { priority: 'candy',   bestIv, maxLevel };
+  if (maxLevel < 50)  return { priority: 'xl',      bestIv, maxLevel };
+  return               { priority: 'covered',  bestIv, maxLevel };
 }
 
 function renderAdvisorCards(bosses, targetEl) {
@@ -3019,12 +3036,11 @@ function renderAdvisorCards(bosses, targetEl) {
 
     matches.forEach(atk => {
       const copies   = DB.attackers?.[atk.key] || [];
-      const priority = getAdvisorPriority(atk, copies);
+      const { priority, bestIv, maxLevel } = getAdvisorPriority(atk, copies);
 
       const tierLabel = is5Star ? '5★' : isMega ? 'Mega' : 'Shadow 5★';
-      const maxLevel  = copies.length ? Math.max(...copies.map(c => parseFloat(c.level)||0)) : null;
 
-      results.push({ atk, boss, priority, tierLabel, maxLevel, copies });
+      results.push({ atk, boss, priority, tierLabel, maxLevel, bestIv, copies });
     });
   });
 
@@ -3033,34 +3049,38 @@ function renderAdvisorCards(bosses, targetEl) {
     return;
   }
 
-  // Sort: catch > candy > xl > covered
-  const ORDER = { catch:0, candy:1, xl:2, covered:3 };
+  // Sort: catch > upgrade > candy > xl > covered
+  const ORDER = { catch:0, upgrade:1, candy:2, xl:3, covered:4 };
   results.sort((a,b) => ORDER[a.priority] - ORDER[b.priority]);
 
   // Limit to top 8 on dashboard (show all on Attackers tab)
   const isHome = targetEl.id === 'raid-advisor';
   const show   = isHome ? results.slice(0,8) : results;
 
-  const icons   = { catch:'🎯', candy:'🍬', xl:'💎', covered:'✅' };
+  const icons   = { catch:'🎯', upgrade:'⬆️', candy:'🍬', xl:'💎', covered:'✅' };
   const labels  = {
     catch:   'Get your first one',
+    upgrade: 'Better IV available',
     candy:   'Farm candy (under Lvl 40)',
     xl:      'Farm XL candy (Lvl 40–49)',
     covered: 'Well covered',
   };
+  const ivThresholdLabel = (r) => (UPGRADE_IV_THRESHOLD[r.atk.tier] || 91) + '%';
   const sublabels = {
     catch:   (r) => `${r.atk.name} is in ${r.tierLabel} raids — you don't have one yet. This is your window!`,
+    upgrade: (r) => `Your best ${r.atk.name} is ${r.bestIv !== null ? r.bestIv + '%' : '?'} IV — below the ${ivThresholdLabel(r)} threshold for ${r.atk.tier} tier. Worth catching a higher IV while it's available.`,
     candy:   (r) => `Your best ${r.atk.name} is Lvl ${r.maxLevel||'?'}. Raid for regular candy while it's available.`,
     xl:      (r) => `Your best ${r.atk.name} is Lvl ${r.maxLevel}. Good time to push it higher with XL candy.`,
     covered: (r) => `You have a well-built ${r.atk.name} (Lvl ${r.maxLevel}). Low priority unless you want extras.`,
   };
+  const priorityColor = { catch:'var(--green)', upgrade:'var(--gold)', candy:'var(--blue)', xl:'var(--purple)', covered:'var(--text3)' };
 
   targetEl.innerHTML = show.map(r => `
     <div class="advisor-card priority-${r.priority}">
       <div class="advisor-icon">${icons[r.priority]}</div>
       <div class="advisor-body">
         <div class="advisor-title">${r.boss.name} <span style="font-size:10px;opacity:0.7;">${r.tierLabel}</span></div>
-        <div style="font-size:10px;font-weight:700;color:${r.priority==='catch'?'var(--green)':r.priority==='candy'?'var(--blue)':r.priority==='xl'?'var(--purple)':'var(--text3)'};">${labels[r.priority]}</div>
+        <div style="font-size:10px;font-weight:700;color:${priorityColor[r.priority] || 'var(--text3)'};">${labels[r.priority]}</div>
         <div class="advisor-sub">${sublabels[r.priority](r)}</div>
         <div class="advisor-tags">
           <span class="badge" style="font-size:10px;background:${r.atk.tier==='S+'?'rgba(244,91,91,0.2)':r.atk.tier==='S'?'var(--red-bg)':r.atk.tier==='A+'?'var(--orange-bg)':'var(--gold-bg)'};color:${r.atk.tier==='S+'?'#ff4444':r.atk.tier==='S'?'var(--red)':r.atk.tier==='A+'?'var(--orange)':'var(--gold)'};">${r.atk.tier}</span>
