@@ -1303,6 +1303,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 <script>
 // ===================== DATA MODEL =====================
 const STORAGE_KEY = 'pokehub_v1';
+const SYNC_KEY    = 'pokehub_sync_config'; // stored separately — never in DB export
 let DB = {
   dexData: {},       // { "standard:25": { attr0: true, attr1: false, ... }, ... }
   customPokes: [],   // [{ id, name, dex, baseId }]
@@ -4019,6 +4020,11 @@ function toast(msg) {
 }
 
 // ===================== INIT =====================
+// State variables that must be declared before renderAll() runs
+let journalFilter = 'all';
+let anDateFrom    = '';
+let anDateTo      = '';
+
 loadDB();
 // Mark Gen 1 as caught — runs only once on first-ever load
 (function migrateGen1() {
@@ -4043,10 +4049,6 @@ if (syncConfigured()) {
 }
 
 // ===================== ANALYTICS =====================
-
-// --- State ---
-let anDateFrom = '';
-let anDateTo   = '';
 
 // --- Preset helpers ---
 function anSetPreset(preset, el) {
@@ -4404,7 +4406,6 @@ function renderAnalyticsRaids(qOpts, dateLabel) {
 
 // ===================== JOURNAL / ADVENTURE LOG =====================
 
-let journalFilter = 'all';
 function setJournalFilter(f, el) {
   journalFilter = f;
   document.querySelectorAll('.filter-pill').forEach(b => {
@@ -4875,7 +4876,6 @@ function renderDashboard() {
 
 
 // Config stored separately
-const SYNC_KEY = 'pokehub_sync_config';
 
 function getSyncConfig() {
   try { return JSON.parse(localStorage.getItem(SYNC_KEY) || '{}'); } catch(e) { return {}; }
