@@ -309,6 +309,20 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .confirm-pop-msg { font-size:13px; color:var(--text); font-weight:500; }
 .confirm-pop-btns { display:flex; gap:6px; }
 
+/* RAID ADVISOR */
+.advisor-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px; margin-bottom:8px; display:flex; gap:12px; align-items:flex-start; }
+.advisor-card.priority-catch   { border-left:3px solid var(--green);  background:var(--green-bg);  }
+.advisor-card.priority-candy   { border-left:3px solid var(--blue);   background:var(--blue-bg);   }
+.advisor-card.priority-xl      { border-left:3px solid var(--purple); background:var(--purple-bg); }
+.advisor-card.priority-covered { border-left:3px solid var(--border); opacity:0.7; }
+.advisor-icon { font-size:20px; flex-shrink:0; width:32px; text-align:center; }
+.advisor-body { flex:1; min-width:0; }
+.advisor-title { font-size:13px; font-weight:600; color:var(--text); }
+.advisor-sub   { font-size:11px; color:var(--text3); margin-top:3px; line-height:1.5; }
+.advisor-tags  { display:flex; gap:4px; flex-wrap:wrap; margin-top:5px; }
+.advisor-empty { text-align:center; color:var(--text3); font-size:13px; padding:20px; }
+.advisor-loading { text-align:center; color:var(--text3); font-size:12px; padding:12px; }
+
 /* DASHBOARD */
 .dash-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
 .dash-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:14px; }
@@ -553,6 +567,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
       <div class="section-title">Raid Attackers</div>
       <div class="section-subtitle" id="atk-subtitle"></div>
     </div>
+  </div>
+  <!-- Raid Advisor Panel -->
+  <div class="card" style="margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);">⚔️ Current raid priorities <span style="font-weight:400;color:var(--text3);font-size:11px;">— based on what's in raids right now</span></div>
+      <button class="btn sm" onclick="loadRaidAdvisor(true)" style="flex-shrink:0;">↻ Refresh</button>
+    </div>
+    <div id="raid-advisor-atk"></div>
   </div>
   <!-- Stats bar -->
   <div class="stats-grid" id="atk-stats" style="margin-bottom:14px;"></div>
@@ -2917,7 +2939,151 @@ function evPopulateModal() {
   }
 }
 
-// ===================== ATTACKERS =====================
+// ===================== RAID ADVISOR =====================
+const SCRAPED_DUCK_RAIDS = 'https://raw.githubusercontent.com/bigfoott/ScrapedDuck/data/raids.min.json';
+let _raidBossCache = null;
+let _raidBossLastFetch = 0;
+const RAID_CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+
+async function fetchRaidBosses(force = false) {
+  const now = Date.now();
+  if (!force && _raidBossCache && (now - _raidBossLastFetch) < RAID_CACHE_TTL) {
+    return _raidBossCache;
+  }
+  try {
+    const res = await fetch(SCRAPED_DUCK_RAIDS);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    _raidBossCache = data;
+    _raidBossLastFetch = now;
+    return data;
+  } catch(e) {
+    console.warn('ScrapedDuck fetch failed:', e.message);
+    return _raidBossCache || []; // fall back to cache if available
+  }
+}
+
+// Normalize a boss name from ScrapedDuck to match against ATTACKERS
+// Handles "Shadow Dialga", "Primal Groudon", "Mega Rayquaza", forme variants, etc.
+function matchBossToAttacker(bossName) {
+  const norm = bossName.toLowerCase().trim();
+  return ATTACKERS.filter(a => {
+    const atkName = a.name.toLowerCase();
+    // Direct match
+    if (atkName === norm) return true;
+    // Strip forme suffixes for matching (e.g. "Incarnate Forme" etc.)
+    const stripped = norm.replace(/\s*\(.*?\)\s*/g, '').trim();
+    if (atkName.replace(/\s*\(.*?\)\s*/g, '').trim() === stripped) return true;
+    // Handle "Necrozma" matching "Dusk Mane Necrozma" and "Dawn Wings Necrozma"
+    // Only if it's an exact species name (no forme prefix in the boss name)
+    return false;
+  });
+}
+
+// Determine priority level for a matched attacker given current copies
+function getAdvisorPriority(atk, copies) {
+  if (!copies || copies.length === 0) return 'catch'; // don't own any
+
+  const maxLevel = Math.max(...copies.map(c => parseFloat(c.level) || 0));
+  const hasShadow = copies.some(c => c.shadow);
+  const wantsShadow = atk.tags.includes('shadow');
+
+  // Shadow attacker and no shadow copy owned
+  if (wantsShadow && !hasShadow) return 'catch';
+
+  if (maxLevel === 0) return 'candy';     // owned but no level entered — assume needs work
+  if (maxLevel < 40)  return 'candy';     // definitely needs regular candy
+  if (maxLevel < 50)  return 'xl';        // needs XL candy
+  return 'covered';                        // well built
+}
+
+function renderAdvisorCards(bosses, targetEl) {
+  if (!bosses.length) {
+    targetEl.innerHTML = `<div class="advisor-empty">No current raid bosses found. Try refreshing.</div>`;
+    return;
+  }
+
+  const results = [];
+
+  bosses.forEach(boss => {
+    // Only care about 5-star, Mega, Primal, Shadow 5-star
+    const tier = boss.tier || '';
+    const is5Star   = tier.includes('5-Star') || tier.includes('5-star');
+    const isMega    = tier.includes('Mega');
+    const isShadow5 = tier.includes('Shadow') && (tier.includes('5') || tier.includes('Rare'));
+    if (!is5Star && !isMega && !isShadow5) return;
+
+    const matches = matchBossToAttacker(boss.name);
+    if (!matches.length) return; // not a tracked attacker
+
+    matches.forEach(atk => {
+      const copies   = DB.attackers?.[atk.key] || [];
+      const priority = getAdvisorPriority(atk, copies);
+
+      const tierLabel = is5Star ? '5★' : isMega ? 'Mega' : 'Shadow 5★';
+      const maxLevel  = copies.length ? Math.max(...copies.map(c => parseFloat(c.level)||0)) : null;
+
+      results.push({ atk, boss, priority, tierLabel, maxLevel, copies });
+    });
+  });
+
+  if (!results.length) {
+    targetEl.innerHTML = `<div class="advisor-empty">No current raid bosses match your tracked attackers. Check back when the rotation changes!</div>`;
+    return;
+  }
+
+  // Sort: catch > candy > xl > covered
+  const ORDER = { catch:0, candy:1, xl:2, covered:3 };
+  results.sort((a,b) => ORDER[a.priority] - ORDER[b.priority]);
+
+  // Limit to top 8 on dashboard (show all on Attackers tab)
+  const isHome = targetEl.id === 'raid-advisor';
+  const show   = isHome ? results.slice(0,8) : results;
+
+  const icons   = { catch:'🎯', candy:'🍬', xl:'💎', covered:'✅' };
+  const labels  = {
+    catch:   'Get your first one',
+    candy:   'Farm candy (under Lvl 40)',
+    xl:      'Farm XL candy (Lvl 40–49)',
+    covered: 'Well covered',
+  };
+  const sublabels = {
+    catch:   (r) => `${r.atk.name} is in ${r.tierLabel} raids — you don't have one yet. This is your window!`,
+    candy:   (r) => `Your best ${r.atk.name} is Lvl ${r.maxLevel||'?'}. Raid for regular candy while it's available.`,
+    xl:      (r) => `Your best ${r.atk.name} is Lvl ${r.maxLevel}. Good time to push it higher with XL candy.`,
+    covered: (r) => `You have a well-built ${r.atk.name} (Lvl ${r.maxLevel}). Low priority unless you want extras.`,
+  };
+
+  targetEl.innerHTML = show.map(r => `
+    <div class="advisor-card priority-${r.priority}">
+      <div class="advisor-icon">${icons[r.priority]}</div>
+      <div class="advisor-body">
+        <div class="advisor-title">${r.boss.name} <span style="font-size:10px;opacity:0.7;">${r.tierLabel}</span></div>
+        <div style="font-size:10px;font-weight:700;color:${r.priority==='catch'?'var(--green)':r.priority==='candy'?'var(--blue)':r.priority==='xl'?'var(--purple)':'var(--text3)'};">${labels[r.priority]}</div>
+        <div class="advisor-sub">${sublabels[r.priority](r)}</div>
+        <div class="advisor-tags">
+          <span class="badge" style="font-size:10px;background:${r.atk.tier==='S+'?'rgba(244,91,91,0.2)':r.atk.tier==='S'?'var(--red-bg)':r.atk.tier==='A+'?'var(--orange-bg)':'var(--gold-bg)'};color:${r.atk.tier==='S+'?'#ff4444':r.atk.tier==='S'?'var(--red)':r.atk.tier==='A+'?'var(--orange)':'var(--gold)'};">${r.atk.tier}</span>
+          ${r.copies.length ? `<span class="badge" style="font-size:10px;background:var(--bg3);color:var(--text3);">${r.copies.length} cop${r.copies.length===1?'y':'ies'}</span>` : ''}
+          ${r.atk.types.map(t => `<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:${TYPE_COLORS[t]}22;color:${TYPE_COLORS[t]};border:1px solid ${TYPE_COLORS[t]}44;">${t}</span>`).join('')}
+        </div>
+      </div>
+    </div>`).join('') +
+    (isHome && results.length > 8 ? `<div style="font-size:11px;color:var(--text3);text-align:center;padding:6px 0;">+${results.length-8} more — see Attackers tab</div>` : '') +
+    `<div style="font-size:10px;color:var(--text3);text-align:right;margin-top:6px;">Data: <a href="https://leekduck.com/raid-bosses/" target="_blank" style="color:var(--text3);">LeekDuck</a> via <a href="https://github.com/bigfoott/ScrapedDuck" target="_blank" style="color:var(--text3);">ScrapedDuck</a></div>`;
+}
+
+async function loadRaidAdvisor(force = false) {
+  const els = ['raid-advisor','raid-advisor-atk'].map(id => document.getElementById(id)).filter(Boolean);
+  if (!els.length) return;
+
+  // Show loading state
+  els.forEach(el => { el.innerHTML = `<div class="advisor-loading">⟳ Fetching current raid bosses from LeekDuck…</div>`; });
+
+  const bosses = await fetchRaidBosses(force);
+  els.forEach(el => renderAdvisorCards(bosses, el));
+}
+
+
 // Source: PokéBase attackers tier list (June 2026)
 // tier: S | A+ | A | B+ | B
 // tags: shadow, mega, primal, origin, crowned, forme
@@ -3217,8 +3383,8 @@ function openAttackerModal(key, copyId) {
   const copies = DB.attackers[key] || [];
   const existing = copyId ? copies.find(c => c.id === copyId) : null;
 
-  document.getElementById('atk-cp').value          = existing?.cp       || '';
-  document.getElementById('atk-level').value        = existing?.level    || '';
+  document.getElementById('atk-cp').value          = existing?.cp       ?? '';
+  document.getElementById('atk-level').value        = existing?.level    ?? '';
   document.getElementById('atk-iv-atk').value       = existing?.ivAtk    ?? '';
   document.getElementById('atk-iv-def').value       = existing?.ivDef    ?? '';
   document.getElementById('atk-iv-hp').value        = existing?.ivHp     ?? '';
@@ -3829,14 +3995,21 @@ function showPage(p) {
   if (p === 'xp') renderXP();
   if (p === 'medals') renderMedals();
   if (p === 'raids') renderRaids();
-  if (p === 'attackers') renderAttackers();
+  if (p === 'attackers') { renderAttackers(); loadRaidAdvisor(); }
   if (p === 'events') renderEvents();
   if (p === 'journal') renderJournal();
   if (p === 'analytics') renderAnalytics();
   if (p === 'manage') renderManage();
 }
 
-function renderAll() { renderDashboard(); renderDex(); renderSpending(); renderXP(); renderRaids(); renderEvents(); renderManage(); }
+function renderAll() {
+  renderDashboard(); renderDex(); renderSpending(); renderXP(); renderRaids();
+  renderEvents(); renderJournal(); renderMedals(); renderAttackers(); renderManage();
+  // Refresh advisor panels if they're currently visible
+  if (document.getElementById('raid-advisor') || document.getElementById('raid-advisor-atk')) {
+    loadRaidAdvisor();
+  }
+}
 
 // ===================== TOAST =====================
 function toast(msg) {
@@ -4670,6 +4843,16 @@ function renderDashboard() {
       </div>
     </div>` : ''}
 
+    <!-- Raid Advisor -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div class="dash-section-label" style="margin-bottom:0;">⚔️ Raid priorities right now</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span id="advisor-credit" style="font-size:10px;color:var(--text3);">via LeekDuck · ScrapedDuck</span>
+        <button class="btn sm" onclick="loadRaidAdvisor(true)">↻</button>
+      </div>
+    </div>
+    <div id="raid-advisor" style="margin-bottom:14px;"></div>
+
     <!-- Recent journal feed -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
       <div class="dash-section-label" style="margin-bottom:0;">Recent highlights</div>
@@ -4686,10 +4869,12 @@ function renderDashboard() {
         </div>`).join('') : `<div style="color:var(--text3);font-size:13px;">Log raids, XP snapshots, and events to see highlights here.</div>`}
     </div>
   `;
+  // Load raid advisor async after render
+  loadRaidAdvisor();
 }
 
 
-// Config stored separately in localStorage (never exported/imported with DB data)
+// Config stored separately
 const SYNC_KEY = 'pokehub_sync_config';
 
 function getSyncConfig() {
