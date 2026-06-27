@@ -3179,7 +3179,19 @@ function renderAdvisorCards(bosses, targetEl) {
         <div class="advisor-sub">${sublabels[r.priority](r)}</div>
         <div class="advisor-tags">
           <span class="badge" style="font-size:10px;background:${r.atk.tier==='S+'?'rgba(244,91,91,0.2)':r.atk.tier==='S'?'var(--red-bg)':r.atk.tier==='A+'?'var(--orange-bg)':'var(--gold-bg)'};color:${r.atk.tier==='S+'?'#ff4444':r.atk.tier==='S'?'var(--red)':r.atk.tier==='A+'?'var(--orange)':'var(--gold)'};">${r.atk.tier}</span>
-          ${r.copies.length ? `<span class="badge" style="font-size:10px;background:var(--bg3);color:var(--text3);">${r.copies.length} cop${r.copies.length===1?'y':'ies'}</span>` : ''}
+          ${r.copies.length ? (() => {
+            const tipLines = r.copies.map((c, i) => {
+              const pct = ivPct(c.ivAtk, c.ivDef, c.ivHp);
+              const ivStr = (c.ivAtk != null && c.ivDef != null && c.ivHp != null)
+                ? `${pct}% (${c.ivAtk}/${c.ivDef}/${c.ivHp})`
+                : 'IVs not entered';
+              const lvlStr = c.level ? `Lvl ${c.level}` : '';
+              const shadow = c.shadow ? ' · Shadow' : c.purified ? ' · Purified' : '';
+              return `#${i+1}: ${[ivStr, lvlStr].filter(Boolean).join(' · ')}${shadow}`;
+            });
+            const tip = tipLines.join('\n');
+            return `<span class="badge" style="font-size:10px;background:var(--bg3);color:var(--text3);cursor:help;" title="${tip}">${r.copies.length} cop${r.copies.length===1?'y':'ies'}</span>`;
+          })() : ''}
           ${r.atk.types.map(t => `<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:${TYPE_COLORS[t]}22;color:${TYPE_COLORS[t]};border:1px solid ${TYPE_COLORS[t]}44;">${t}</span>`).join('')}
         </div>
       </div>
