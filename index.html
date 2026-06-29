@@ -1565,13 +1565,20 @@ function getPassCost(passType) {
 // Returns total cost for an array of raids, broken down by pass type
 function getRaidsCost(raids) {
   let totalCoins = 0, totalINR = 0, totalUSD = 0;
+  const { inrPerCoin, usdPerInr, usdPerCoin } = getEffectiveRates();
   const byPass = groupBy(raids, r => r.passType || 'free');
   Object.entries(byPass).forEach(([passType, rows]) => {
+    if (passType === 'free') return;
     const cost = getPassCost(passType);
-    if (!cost) return;
-    totalCoins += cost.coinsPerPass * rows.length;
-    totalINR   += cost.inrPerPass   * rows.length;
-    totalUSD   += cost.usdPerPass   * rows.length;
+    // Use logged coin spend cost if available, otherwise default pass costs × effective rate
+    const coinsPerPass = cost?.coinsPerPass || (passType === 'remote' ? 175 : passType === 'premium' ? 100 : 0);
+    if (!coinsPerPass) return;
+    const coins = coinsPerPass * rows.length;
+    const inr   = coins * inrPerCoin;
+    const usd   = coins * usdPerCoin;
+    totalCoins += coins;
+    totalINR   += inr;
+    totalUSD   += usd;
   });
   return { totalCoins, totalINR, totalUSD };
 }
@@ -4704,11 +4711,20 @@ function renderAnalyticsRaids(qOpts, dateLabel) {
 
   // Overall cost
   const overallCost = getRaidsCost(raids);
-  const hasCostData = overallCost.totalUSD > 0 || overallCost.totalINR > 0;
+  const { inrPerCoin, usdPerInr, usdPerCoin } = getEffectiveRates();
+  const hasRates = usdPerCoin > 0;
+  const hasCostData = hasRates && raids.some(r => r.passType === 'remote' || r.passType === 'premium');
+  const showCost = hasCostData;
 
-  // Pass cost reference (to show user what rates are being used)
+  // Pass cost reference
   const remoteCost  = getPassCost('remote');
   const premiumCost = getPassCost('premium');
+
+  // If no coin spend entries but we have rates, derive pass cost from effective rate
+  const remoteCoinsPerPass  = remoteCost?.coinsPerPass  || 175; // standard remote pass cost
+  const premiumCoinsPerPass = premiumCost?.coinsPerPass || 100;
+  const remoteUSD  = remoteCoinsPerPass  * usdPerCoin;
+  const premiumUSD = premiumCoinsPerPass * usdPerCoin;
 
   document.getElementById('an-raid-stats').innerHTML = [
     { label: 'Raids',        val: raids.length,                                                       color: 'blue'   },
@@ -4757,7 +4773,7 @@ function renderAnalyticsRaids(qOpts, dateLabel) {
     const bCostPerShiny = bShinies > 0 && bCost.totalUSD > 0
       ? '$' + (bCost.totalUSD / bShinies).toFixed(2) : null;
     return { boss, count: rows.length, wins: bWins, shinies: bShinies, hundos: bHundos,
-             shinyRate: bShinyRate, cost: bCost, costPerShiny: bCostPerShiny };
+             shinyRate: bShinyRate, cost: bCost, costPerShiny: bCostPerShiny, _rows: rows };
   }).sort((a,b) => b.count - a.count);
 
   // "Most expensive hunts" bar chart — USD spent per boss, sorted desc
@@ -4774,22 +4790,19 @@ function renderAnalyticsRaids(qOpts, dateLabel) {
   document.getElementById('an-raid-cost-chart').innerHTML = showCost && costItems.length
     ? `<div class="an-chart-title">USD spent per boss <span style="font-weight:400;color:var(--text3);font-size:11px;">${dateLabel} · gold = got shiny</span></div>
        ${svgHBar(costItems, { fmt: v => '$'+v.toFixed(2) })}`
-    : `<div class="an-chart-title">USD spent per boss</div><div class="an-empty">Log coin spends for raid passes in Spending to see cost breakdown here</div>`;
+    : `<div class="an-chart-title">USD spent per boss</div><div class="an-empty">${hasRates ? 'No paid raids logged yet' : 'Set starting coin balance and USD paid in Manage to enable cost tracking'}</div>`;
 
   // Cost rate footnote
-  const rateNote = [
-    remoteCost  ? `Remote: ${Math.round(remoteCost.coinsPerPass)} 🪙 (~$${remoteCost.usdPerPass.toFixed(2)})`  : null,
-    premiumCost ? `Premium: ${Math.round(premiumCost.coinsPerPass)} 🪙 (~$${premiumCost.usdPerPass.toFixed(2)})` : null,
-  ].filter(Boolean).join('  ·  ');
-
-  const showCost = hasCostData;
+  const rateNote = hasRates ? [
+    `Remote: ${Math.round(remoteCoinsPerPass)} 🪙 (~$${remoteUSD.toFixed(2)})`,
+    `Premium: ${Math.round(premiumCoinsPerPass)} 🪙 (~$${premiumUSD.toFixed(2)})`,
+  ].join('  ·  ') : '';
 
   document.getElementById('an-raid-boss-table').innerHTML = `
     <div class="an-chart-title">
       Boss breakdown <span style="font-weight:400;color:var(--text3);font-size:11px;">${dateLabel}</span>
-      ${rateNote ? `<span style="font-size:10px;color:var(--text3);margin-left:8px;">${rateNote} (avg from your spend log)</span>` : ''}
+      ${rateNote ? `<span style="font-size:10px;color:var(--text3);margin-left:8px;">${rateNote}</span>` : ''}
     </div>
-    ${!showCost ? `<div style="font-size:11px;color:var(--text3);margin-bottom:10px;">💡 Log coin spends for "Raid pass" and "Remote raid pass" in Spending to see cost columns</div>` : ''}
     <table class="an-boss-table">
       <thead><tr>
         <th>Boss</th><th>Raids</th><th>Wins</th><th>Win%</th>
@@ -4809,7 +4822,19 @@ function renderAnalyticsRaids(qOpts, dateLabel) {
         <td style="color:var(--gold);font-weight:500">${b.cost.totalUSD > 0 ? '$'+b.cost.totalUSD.toFixed(2) : '—'}</td>
         <td style="color:var(--green)">${b.costPerShiny || '—'}</td>` : ''}
       </tr>`).join('')}</tbody>
-    </table>`;
+    </table>
+    ${showCost ? `<div style="font-size:11px;color:var(--text3);margin-top:10px;line-height:1.8;">
+      ${bossStats.filter(b=>b.cost.totalUSD>0).map(b => {
+        const passBreakdown = (() => {
+          const bByPass = groupBy(b._rows||[], r=>r.passType||'free');
+          return Object.entries(bByPass).filter(([t])=>t!=='free').map(([t,rs])=>{
+            const cpp = t==='remote'?remoteCoinsPerPass:premiumCoinsPerPass;
+            return `${rs.length}× ${t} (${Math.round(cpp)} 🪙 each)`;
+          }).join(', ');
+        })();
+        return `<b>${b.boss}:</b> ${b.count} raid${b.count!==1?'s':''} · ${b.cost.totalCoins>0?Math.round(b.cost.totalCoins).toLocaleString()+' 🪙':''} · $${b.cost.totalUSD.toFixed(2)} total${b.shinies>0?' · <span style="color:var(--gold)">★ shiny cost $'+b.cost.totalUSD.toFixed(2)+'</span>':''}`;
+      }).join('<br>')}
+    </div>` : ''}`;
 }
 
 
