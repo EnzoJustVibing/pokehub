@@ -882,7 +882,17 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <div class="manage-title">Accounts</div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">Accounts used in spending tracker. Set starting balances for existing coins/INR you already have.</div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px 12px;background:var(--bg3);border-radius:var(--radius);flex-wrap:wrap;">
-      <span style="font-size:13px;color:var(--text);font-weight:500;">INR starting balance:</span>
+      <span style="font-size:13px;color:var(--text);font-weight:500;white-space:nowrap;">Bulk coin pack rate:</span>
+      <input type="number" id="coin-pack-coins" min="0" placeholder="14500"
+        style="width:100px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;color:var(--text);font-size:13px;"
+        oninput="setCoinPackRate()">
+      <span style="font-size:12px;color:var(--text3);">coins for</span>
+      <span style="font-size:13px;color:var(--text);">₹</span>
+      <input type="number" id="coin-pack-inr" min="0" placeholder="2899" step="0.01"
+        style="width:100px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;color:var(--text);font-size:13px;"
+        oninput="setCoinPackRate()">
+      <span style="font-size:12px;color:var(--text3);" id="coin-pack-rate-preview"></span>
+    </div>
       <input type="number" id="inr-starting-val" min="0" placeholder="0"
         style="width:120px;background:var(--bg4);border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;color:var(--text);font-size:13px;"
         oninput="setINRStarting(this.value)">
@@ -1397,6 +1407,8 @@ let DB = {
   inrStarting: 0,          // one-time INR starting balance
   inrStartingUSD: 0,       // USD paid for inrStarting balance (for cost attribution)
   inrSpends: [],           // [{ id, date, inr, category, notes }] — direct INR purchases
+  coinPackCoins: 0,        // coins in your preferred bulk pack (e.g. 14500)
+  coinPackINR: 0,          // INR cost of that pack (e.g. 2899)
   coinStarting: {},         // { accountName: coins } starting coin balance per account
   giftCards: [],            // [{ id, date, usd, inr, notes }]
   coinPurchases: [],        // [{ id, date, account, inr, coins }]
@@ -1502,29 +1514,42 @@ const PASS_TYPE_TO_CATEGORY = {
 };
 
 // USD equivalent of gym coins earned — based on effective coin purchase rate
-// Shared rate calculation — includes starting balances as a virtual purchase
-// so cost calculations work even when no coin purchases have been logged yet
+// Shared rate calculation — priority order:
+// 1. Manually set coin pack rate (most accurate — your actual bulk purchase)
+// 2. Logged coin purchases
+// 3. Starting balance as fallback
 function getEffectiveRates() {
-  // INR per coin: logged purchases + starting balance treated as one purchase
-  const purchasedCoins = sumField(DB.coinPurchases || [], 'coins');
-  const purchasedINR   = sumField(DB.coinPurchases || [], 'inr');
-  const startingCoins  = Object.values(DB.coinStarting || {}).reduce((s,v)=>s+v,0);
-  const startingINR    = DB.inrStarting || 0;
-  // Combine: starting INR "bought" starting coins
-  const totalCoins = purchasedCoins + startingCoins;
-  const totalINR   = purchasedINR   + startingINR;
-  const inrPerCoin = totalCoins > 0 ? totalINR / totalCoins : 0;
-
-  // USD per INR: gift cards + inrStartingUSD
-  const gcUSD    = sumField(DB.giftCards || [], 'usd');
-  const gcINR    = sumField(DB.giftCards || [], 'inr');
-  const totalUSD = gcUSD + (DB.inrStartingUSD || 0);
+  // USD per INR: gift cards + inrStartingUSD (always use this regardless of coin rate source)
+  const gcUSD      = sumField(DB.giftCards || [], 'usd');
+  const gcINR      = sumField(DB.giftCards || [], 'inr');
+  const startingINR = DB.inrStarting || 0;
+  const totalUSD    = gcUSD + (DB.inrStartingUSD || 0);
   const totalINRAll = gcINR + startingINR;
-  const usdPerInr = totalINRAll > 0 ? totalUSD / totalINRAll : 0;
+  const usdPerInr   = totalINRAll > 0 ? totalUSD / totalINRAll : 0;
 
-  const usdPerCoin = inrPerCoin * usdPerInr;
+  // INR per coin — use best available source
+  let inrPerCoin = 0;
+  if (DB.coinPackCoins > 0 && DB.coinPackINR > 0) {
+    // Priority 1: manually entered bulk pack rate
+    inrPerCoin = DB.coinPackINR / DB.coinPackCoins;
+  } else {
+    // Priority 2: logged coin purchases
+    const purchasedCoins = sumField(DB.coinPurchases || [], 'coins');
+    const purchasedINR   = sumField(DB.coinPurchases || [], 'inr');
+    if (purchasedCoins > 0) {
+      inrPerCoin = purchasedINR / purchasedCoins;
+    } else {
+      // Priority 3: starting balance as last resort
+      const startingCoins = Object.values(DB.coinStarting || {}).reduce((s,v)=>s+v,0);
+      if (startingCoins > 0) inrPerCoin = startingINR / startingCoins;
+    }
+  }
 
-  return { inrPerCoin, usdPerInr, usdPerCoin, totalCoins, totalINR, totalUSD, totalINRAll };
+  const usdPerCoin  = inrPerCoin * usdPerInr;
+  const totalCoins  = sumField(DB.coinPurchases || [], 'coins') +
+                      Object.values(DB.coinStarting || {}).reduce((s,v)=>s+v,0);
+
+  return { inrPerCoin, usdPerInr, usdPerCoin, totalCoins, totalUSD, totalINRAll };
 }
 
 function gymCoinsToUSD(coinCount) {
@@ -2621,6 +2646,9 @@ function renderManage() {
     </div>
   `).join('');
 
+  // Coin pack rate
+  document.getElementById('coin-pack-coins').value = DB.coinPackCoins || '';
+  document.getElementById('coin-pack-inr').value   = DB.coinPackINR   || '';
   // INR starting balance
   document.getElementById('inr-starting-val').value = DB.inrStarting || '';
   document.getElementById('inr-starting-usd').value = DB.inrStartingUSD || '';
@@ -4294,6 +4322,25 @@ function deleteCoinPurchase(id, el) { confirmDelete(el, 'this coin purchase', ()
 function deleteCoinSpend(id, el)    { confirmDelete(el, 'this coin spend',    () => { DB.coinSpends     = DB.coinSpends.filter(g=>g.id!==id);     saveDB(); renderSpending(); }); }
 function deleteGymCoins(id, el)     { confirmDelete(el, 'this gym entry',     () => { DB.gymCoins      = (DB.gymCoins||[]).filter(g=>g.id!==id);  saveDB(); renderSpending(); }); }
 function deleteEvent(id, el)        { confirmDelete(el, 'this event',         () => { DB.events        = DB.events.filter(g=>g.id!==id);          saveDB(); renderEvents();   }); }
+
+function setCoinPackRate() {
+  const coins = parseInt(document.getElementById('coin-pack-coins').value) || 0;
+  const inr   = parseFloat(document.getElementById('coin-pack-inr').value) || 0;
+  DB.coinPackCoins = coins;
+  DB.coinPackINR   = inr;
+  // Show derived rate
+  const preview = document.getElementById('coin-pack-rate-preview');
+  if (preview && coins > 0 && inr > 0) {
+    const { usdPerInr } = getEffectiveRates();
+    const inrPerCoin = inr / coins;
+    const usdPerCoin = inrPerCoin * usdPerInr;
+    preview.textContent = `= ₹${inrPerCoin.toFixed(4)}/coin · ~$${(usdPerCoin * 175).toFixed(2)}/remote pass`;
+  } else if (preview) {
+    preview.textContent = '';
+  }
+  saveDB();
+  renderSpending();
+}
 
 function setINRStarting(val) {
   DB.inrStarting = parseFloat(val) || 0;
