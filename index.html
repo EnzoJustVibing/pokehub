@@ -3389,43 +3389,75 @@ const ATK_CANDY_FROM = {
 
 function parseLeekDuckText(text) {
   if (!text || text.length < 100) return null;
-  // Event name
-  const nameMatch = text.match(/^#\s+(.+)$/m);
-  const eventName = nameMatch ? nameMatch[1].trim() : 'Event';
+
+  // Event name — first substantial line that looks like a title
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  let eventName = 'Event';
+  for (const l of lines) {
+    if (l.length > 3 && l.length < 60
+      && !/^(leek duck|shiny|raids|current raid|raid now|research|eggs|events|menu|resources|pen pal|promo)/i.test(l)
+      && !/^\d/.test(l)
+      && !/^(starts|ends|features|spawns|graphic)$/i.test(l)) {
+      eventName = l; break;
+    }
+  }
+
   // End date
   const endPatterns = [
-    /Ends:\s*\n?\s*([^\n]{5,60}(?:Local Time|PM|AM))/i,
+    /Ends:\s*\n?\s*([^\n]{5,80}(?:Local Time|PM|AM))/i,
     /to\s+([A-Za-z]+day,\s+[A-Za-z]+ \d+,\s+\d{4}[^\n]*(?:Local Time|PM|AM)[^\n]*)/i,
   ];
   let endStr = null;
   for (const pat of endPatterns) { const m = text.match(pat); if (m) { endStr = m[1].trim(); break; } }
-  // Spawns section
+
+  // Find spawns section — look for "Wild Encounters" or "Spawns" header
   const lower = text.toLowerCase();
-  const sectionStart = ['wild encounters','## spawns','wild pokémon'].reduce((best, s) => {
-    const idx = lower.indexOf(s); return (idx !== -1 && (best === -1 || idx < best)) ? idx : best;
-  }, -1);
+  const sectionMarkers = ['wild encounters', 'spawns\n', 'wild pokémon', 'spawnsSpawns'];
+  let sectionStart = -1;
+  for (const marker of sectionMarkers) {
+    const idx = lower.indexOf(marker.toLowerCase());
+    if (idx !== -1 && (sectionStart === -1 || idx < sectionStart)) sectionStart = idx;
+  }
   if (sectionStart === -1) return { eventName, endStr, spawns: [] };
-  const sectionEndCandidates = ['## raids','## research','## field research','## go pass','## sales','## features','## graphic']
-    .map(s => lower.indexOf(s, sectionStart + 10)).filter(i => i !== -1);
+
+  // End section at Raids/Research/GO Pass etc.
+  const sectionEndMarkers = ['raids\n', 'research\n', 'field research', 'go pass', 'sales\n', 'graphic\n', 'raidsRaids', 'researchResearch'];
+  const sectionEndCandidates = sectionEndMarkers
+    .map(s => lower.indexOf(s.toLowerCase(), sectionStart + 20))
+    .filter(i => i !== -1);
   const sectionEnd = sectionEndCandidates.length ? Math.min(...sectionEndCandidates) : sectionStart + 3000;
   const spawnSection = text.slice(sectionStart, sectionEnd);
 
+  // SKIP words — noise in the spawn section
+  const SKIP = new Set(['shiny','shinyShiny','spawns','wild encounters','wild pokémon',
+    'you may encounter','note:','appearing','hemisphere','might even encounter',
+    'event-themed','event themed']);
+
   const spawnNames = new Set();
-  const lines = spawnSection.split('\n').map(l => l.trim()).filter(Boolean);
-  let lastWasImage = false;
-  for (const line of lines) {
-    if (line.includes('cdn.leekduck') || line.startsWith('![')) { lastWasImage = true; continue; }
-    if (lastWasImage && line.length > 1 && line.length < 45 && !/^[#*\-!]/.test(line) && !/^\d/.test(line)) {
-      spawnNames.add(line.replace(/\s*\([^)]*\)\s*$/, '').trim()); // base name
-      spawnNames.add(line.trim()); // full name with forme
+  const spawnLines = spawnSection.split('\n').map(l => l.trim()).filter(Boolean);
+
+  for (const line of spawnLines) {
+    // Skip noise
+    if (SKIP.has(line.toLowerCase())) continue;
+    if (/^(you |note:|appearing|#|\*|-\s*$|spawns|wild|event)/i.test(line)) continue;
+    // Skip very long lines (sentences) or very short ones
+    if (line.length < 3 || line.length > 50) continue;
+    // Skip lines starting with lowercase (sentences mid-paragraph)
+    if (/^[a-z]/.test(line)) continue;
+    // Must start with uppercase letter — actual Pokémon name
+    if (/^[A-Z]/.test(line)) {
+      const base = line.replace(/\s*\([^)]*\)\s*$/, '').trim(); // strip forme
+      if (base.length > 1) spawnNames.add(base);
+      spawnNames.add(line); // also add with forme for matching
     }
-    lastWasImage = false;
   }
-  // Also catch dash-list Pokémon names
-  (spawnSection.match(/^-\s+([A-Z][a-zA-Zéèê'\-\. ]{1,30})$/gm) || []).forEach(m => {
-    const name = m.replace(/^-\s+/, '').replace(/\s*\(.*\)/, '').trim();
+
+  // Also catch dash-list items: "- Pidgey"
+  (spawnSection.match(/^[-•]\s+([A-Z][a-zA-Zéèê'\-\. ]{1,35})$/gm) || []).forEach(m => {
+    const name = m.replace(/^[-•]\s+/, '').replace(/\s*\(.*\)/, '').trim();
     if (name.length > 1) spawnNames.add(name);
   });
+
   return { eventName, endStr, spawns: [...spawnNames] };
 }
 
