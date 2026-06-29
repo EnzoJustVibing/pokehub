@@ -595,7 +595,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         <div style="font-size:12px;font-weight:700;color:var(--text2);">🌿 Wild spawn candy opportunities</div>
         <div style="font-size:11px;color:var(--text3);margin-top:2px;">Paste a LeekDuck event page (Ctrl+A, Ctrl+C on the page, paste here)</div>
       </div>
-      <button class="btn sm" onclick="document.getElementById('spawn-paste-area').value=''; document.getElementById('spawn-results').innerHTML=''; document.getElementById('spawn-paste-wrap').style.display=\'block\'">+ Parse event</button>
+      <button class="btn sm" onclick="openSpawnParser()">+ Parse event</button>
     </div>
     <div id="spawn-paste-wrap" style="display:none;">
       <textarea id="spawn-paste-area" placeholder="Paste LeekDuck event page content here..." style="width:100%;height:120px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;color:var(--text);font-size:12px;resize:vertical;font-family:inherit;" oninput="parseSpawnPage(this.value)"></textarea>
@@ -3427,6 +3427,12 @@ function parseLeekDuckText(text) {
     if (name.length > 1) spawnNames.add(name);
   });
   return { eventName, endStr, spawns: [...spawnNames] };
+}
+
+function openSpawnParser() {
+  document.getElementById('spawn-paste-area').value = '';
+  document.getElementById('spawn-results').innerHTML = '';
+  document.getElementById('spawn-paste-wrap').style.display = 'block';
 }
 
 function parseSpawnPage(text) {
