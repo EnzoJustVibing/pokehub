@@ -588,8 +588,20 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     </div>
     <div id="raid-advisor-atk"></div>
   </div>
-  <!-- Stats bar -->
-  <div class="stats-grid" id="atk-stats" style="margin-bottom:14px;"></div>
+  <!-- Spawn Advisor Panel -->
+  <div class="card" style="margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--text2);">🌿 Wild spawn candy opportunities</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">Paste a LeekDuck event page (Ctrl+A, Ctrl+C on the page, paste here)</div>
+      </div>
+      <button class="btn sm" onclick="document.getElementById('spawn-paste-area').value=''; document.getElementById('spawn-results').innerHTML=''; document.getElementById('spawn-paste-wrap').style.display=\'block\'">+ Parse event</button>
+    </div>
+    <div id="spawn-paste-wrap" style="display:none;">
+      <textarea id="spawn-paste-area" placeholder="Paste LeekDuck event page content here..." style="width:100%;height:120px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;color:var(--text);font-size:12px;resize:vertical;font-family:inherit;" oninput="parseSpawnPage(this.value)"></textarea>
+    </div>
+    <div id="spawn-results"></div>
+  </div>
   <!-- Controls -->
   <div class="controls-row" style="margin-bottom:10px;flex-wrap:wrap;gap:8px;">
     <div style="display:flex;gap:4px;flex-wrap:wrap;">
@@ -1489,7 +1501,37 @@ const PASS_TYPE_TO_CATEGORY = {
   free:    null,   // free passes cost 0 coins
 };
 
-// Returns { coinsPerPass, inrPerCoin, usdPerInr, coinsPerCoin (redundant), usdPerPass }
+// USD equivalent of gym coins earned — based on effective coin purchase rate
+// Shared rate calculation — includes starting balances as a virtual purchase
+// so cost calculations work even when no coin purchases have been logged yet
+function getEffectiveRates() {
+  // INR per coin: logged purchases + starting balance treated as one purchase
+  const purchasedCoins = sumField(DB.coinPurchases || [], 'coins');
+  const purchasedINR   = sumField(DB.coinPurchases || [], 'inr');
+  const startingCoins  = Object.values(DB.coinStarting || {}).reduce((s,v)=>s+v,0);
+  const startingINR    = DB.inrStarting || 0;
+  // Combine: starting INR "bought" starting coins
+  const totalCoins = purchasedCoins + startingCoins;
+  const totalINR   = purchasedINR   + startingINR;
+  const inrPerCoin = totalCoins > 0 ? totalINR / totalCoins : 0;
+
+  // USD per INR: gift cards + inrStartingUSD
+  const gcUSD    = sumField(DB.giftCards || [], 'usd');
+  const gcINR    = sumField(DB.giftCards || [], 'inr');
+  const totalUSD = gcUSD + (DB.inrStartingUSD || 0);
+  const totalINRAll = gcINR + startingINR;
+  const usdPerInr = totalINRAll > 0 ? totalUSD / totalINRAll : 0;
+
+  const usdPerCoin = inrPerCoin * usdPerInr;
+
+  return { inrPerCoin, usdPerInr, usdPerCoin, totalCoins, totalINR, totalUSD, totalINRAll };
+}
+
+function gymCoinsToUSD(coinCount) {
+  if (!coinCount) return 0;
+  const { usdPerCoin } = getEffectiveRates();
+  return coinCount * usdPerCoin;
+}
 // for a given passType, using ALL logged coin spend entries for that category
 // (weighted average across all logged purchases of that pass type).
 function getPassCost(passType) {
@@ -1510,15 +1552,9 @@ function getPassCost(passType) {
   });
   const coinsPerPass = totalPasses > 0 ? totalCoins / totalPasses : 0;
 
-  // Effective INR per coin from all purchases
-  const totalINR   = sumField(DB.coinPurchases || [], 'inr');
-  const totalBought = sumField(DB.coinPurchases || [], 'coins');
-  const inrPerCoin = totalBought > 0 ? totalINR / totalBought : 0;
-
-  // USD per INR from all gift cards
-  const totalUSD = sumField(DB.giftCards || [], 'usd');
-  const totalGCInr = sumField(DB.giftCards || [], 'inr');
-  const usdPerInr = totalGCInr > 0 ? totalUSD / totalGCInr : 0;
+  // Effective rates including starting balances
+  const { inrPerCoin, usdPerInr } = getEffectiveRates();
+  if (!inrPerCoin || !usdPerInr) return null;
 
   const inrPerPass = coinsPerPass * inrPerCoin;
   const usdPerPass = inrPerPass * usdPerInr;
@@ -1562,18 +1598,18 @@ function getTotalUSDSpent() {
 function getINRSpendUSD() {
   const totalSpendINR = sumField(DB.inrSpends || [], 'inr');
   if (!totalSpendINR) return 0;
-  const totalGCInr = sumField(DB.giftCards || [], 'inr') + (DB.inrStarting || 0);
-  const totalUSD   = sumField(DB.giftCards || [], 'usd') + (DB.inrStartingUSD || 0);
-  const usdPerInr  = totalGCInr > 0 ? totalUSD / totalGCInr : 0;
+  const { usdPerInr } = getEffectiveRates();
   return totalSpendINR * usdPerInr;
 }
 function getTotalCoins(acct) {
-  return sumField(acct ? query('coinPurchases', {account: acct}) : DB.coinPurchases, 'coins');
+  const purchased = sumField(acct ? query('coinPurchases', {account: acct}) : DB.coinPurchases, 'coins');
+  if (acct) return purchased; // per-account doesn't use starting for rate calc
+  const starting = Object.values(DB.coinStarting || {}).reduce((s,v)=>s+v,0);
+  return purchased + starting;
 }
 function getEffCostPerCoin() {
-  const usd   = getTotalUSDSpent();
-  const coins = getTotalCoins();
-  return coins > 0 ? (usd / coins * 100).toFixed(3) : null;
+  const { usdPerCoin } = getEffectiveRates();
+  return usdPerCoin > 0 ? (usdPerCoin * 100).toFixed(3) : null;
 }
 
 
@@ -2193,10 +2229,15 @@ function renderSpending() {
   const acctBought  = sumField(query('coinPurchases', {account: spendAcct}), 'coins');
   const acctGym     = sumField(query('gymCoins',      {account: spendAcct}), 'coins');
   const acctSpent   = sumCoinsSpent(query('coinSpends', {account: spendAcct}));
+  const acctGymUSD = gymCoinsToUSD(acctGym);
   document.getElementById('acct-stats').innerHTML = `
     <div class="stat-card"><div class="stat-label">Coin balance</div><div class="stat-value gold">${acctCoins.toLocaleString()}</div></div>
     <div class="stat-card"><div class="stat-label">Purchased</div><div class="stat-value blue">${acctBought.toLocaleString()}</div></div>
-    <div class="stat-card"><div class="stat-label">Gym earned</div><div class="stat-value green">${acctGym.toLocaleString()}</div></div>
+    <div class="stat-card">
+      <div class="stat-label">Gym earned</div>
+      <div class="stat-value green">${acctGym.toLocaleString()}</div>
+      ${acctGymUSD > 0 ? `<div style="font-size:11px;color:var(--text3);margin-top:2px;">≈ $${acctGymUSD.toFixed(2)} value</div>` : ''}
+    </div>
     ${acctStarting ? `<div class="stat-card"><div class="stat-label">Starting</div><div class="stat-value" style="color:var(--text2)">${acctStarting.toLocaleString()}</div></div>` : ''}
     <div class="stat-card"><div class="stat-label">Shop spent</div><div class="stat-value red">${acctSpent.toLocaleString()}</div></div>
   `;
@@ -3212,6 +3253,197 @@ async function loadRaidAdvisor(force = false) {
 }
 
 
+// ===================== SPAWN ADVISOR =====================
+
+// Maps attacker key → array of wild-spawn Pokémon names that give candy for it
+const ATK_CANDY_FROM = {
+  zamazenta_crowned:['Zamazenta'],zacian_crowned:['Zacian'],eternatus:['Eternatus'],
+  dusk_mane_necrozma:['Necrozma'],dawn_wings_necrozma:['Necrozma'],white_kyurem:['Kyurem'],
+  primal_groudon:['Groudon'],primal_kyogre:['Kyogre'],mega_rayquaza:['Rayquaza'],
+  mega_lucario:['Riolu','Lucario'],mega_mewtwo_y:['Mewtwo'],
+  shadow_reshiram:['Reshiram'],keldeo_resolute:['Keldeo'],shadow_dialga:['Dialga'],
+  shadow_palkia:['Palkia'],shadow_heatran:['Heatran'],shadow_groudon:['Groudon'],
+  mega_diancie:['Diancie'],blacephalon:['Blacephalon'],black_kyurem:['Kyurem'],
+  shadow_rampardos:['Cranidos','Rampardos'],shadow_salamence:['Bagon','Shelgon','Salamence'],
+  mega_blaziken:['Torchic','Combusken','Blaziken'],shadow_mewtwo:['Mewtwo'],
+  mega_gengar:['Gastly','Haunter','Gengar'],mega_charizard_y:['Charmander','Charmeleon','Charizard'],
+  shadow_landorus_i:['Landorus'],shadow_greninja:['Froakie','Frogadier','Greninja'],
+  mega_raichu_y:['Pichu','Pikachu','Raichu'],shadow_hydreigon:['Deino','Zweilous','Hydreigon'],
+  shadow_darkrai:['Darkrai'],shadow_toucannon:['Pikipek','Trumbeak','Toucannon'],
+  shadow_vikavolt:['Grubbin','Charjabug','Vikavolt'],shadow_tyrantrum:['Tyrunt','Tyrantrum'],
+  shadow_conkeldurr:['Timburr','Gurdurr','Conkeldurr'],shadow_darmanitan:['Darumaka','Darmanitan'],
+  kartana:['Kartana'],regieleki:['Regieleki'],xurkitree:['Xurkitree'],zeraora:['Zeraora'],
+  shadow_chandelure:['Litwick','Lampent','Chandelure'],landorus_therian:['Landorus'],
+  shadow_excadrill:['Drilbur','Excadrill'],shadow_regigigas:['Regigigas'],zekrom:['Zekrom'],
+  terrakion:['Terrakion'],reshiram:['Reshiram'],shadow_gigalith:['Roggenrola','Boldore','Gigalith'],
+  palkia_origin:['Palkia'],shadow_kyogre:['Kyogre'],lucario:['Riolu','Lucario'],
+  shadow_mamoswine:['Swinub','Piloswine','Mamoswine'],shadow_electivire:['Elekid','Electabuzz','Electivire'],
+  rayquaza:['Rayquaza'],shadow_magnezone:['Magnemite','Magneton','Magnezone'],
+  shadow_garchomp:['Gible','Gabite','Garchomp'],shadow_rhyperior:['Rhyhorn','Rhydon','Rhyperior'],
+  mega_abomasnow:['Snover','Abomasnow'],mega_garchomp:['Gible','Gabite','Garchomp'],
+  shadow_metagross:['Beldum','Metang','Metagross'],mega_metagross:['Beldum','Metang','Metagross'],
+  mega_glalie:['Snorunt','Glalie'],mega_manectric:['Electrike','Manectric'],mega_absol:['Absol'],
+  shadow_tyranitar:['Larvitar','Pupitar','Tyranitar'],shadow_blaziken:['Torchic','Combusken','Blaziken'],
+  shadow_ho_oh:['Ho-Oh'],mega_gardevoir:['Ralts','Kirlia','Gardevoir'],shadow_raikou:['Raikou'],
+  shadow_gardevoir:['Ralts','Kirlia','Gardevoir'],mega_sceptile:['Treecko','Grovyle','Sceptile'],
+  shadow_swampert:['Mudkip','Marshtomp','Swampert'],mega_tyranitar:['Larvitar','Pupitar','Tyranitar'],
+  shadow_dragonite:['Dratini','Dragonair','Dragonite'],shadow_moltres:['Moltres'],
+  mega_mewtwo_x:['Mewtwo'],shadow_gengar:['Gastly','Haunter','Gengar'],
+  shadow_machamp:['Machop','Machoke','Machamp'],shadow_kingler:['Krabby','Kingler'],
+  shadow_delphox:['Fennekin','Braixen','Delphox'],shadow_chesnaught:['Chespin','Quilladin','Chesnaught'],
+  mega_dragonite:['Dratini','Dragonair','Dragonite'],shadow_giratina_alt:['Giratina'],
+  shadow_emboar:['Tepig','Pignite','Emboar'],baxcalibur:['Frigibax','Arctibax','Baxcalibur'],
+  lunala:['Cosmog','Cosmoem','Lunala'],yveltal:['Yveltal'],regidrago:['Regidrago'],
+  enamorus_i:['Enamorus'],hoopa_unbound:['Hoopa'],glimmora:['Glimmet','Glimmora'],
+  urshifu_single:['Kubfu','Urshifu'],urshifu_rapid:['Kubfu','Urshifu'],darkrai:['Darkrai'],
+  heatran:['Heatran'],giratina_origin:['Giratina'],keldeo:['Keldeo'],shaymin_sky:['Shaymin'],
+  palkia:['Palkia'],hydreigon:['Deino','Zweilous','Hydreigon'],thundurus_therian:['Thundurus'],
+  volcarona:['Larvesta','Volcarona'],chandelure:['Litwick','Lampent','Chandelure'],
+  conkeldurr:['Timburr','Gurdurr','Conkeldurr'],dialga_origin:['Dialga'],
+  mamoswine:['Swinub','Piloswine','Mamoswine'],garchomp:['Gible','Gabite','Garchomp'],
+  metagross:['Beldum','Metang','Metagross'],mega_latios:['Latios'],groudon:['Groudon'],
+  rhyperior:['Rhyhorn','Rhydon','Rhyperior'],salamence:['Bagon','Shelgon','Salamence'],
+  shadow_honchkrow:['Murkrow','Honchkrow'],rampardos:['Cranidos','Rampardos'],
+  mega_latias:['Latias'],shadow_latios:['Latios'],shadow_staraptor:['Starly','Staravia','Staraptor'],
+  shadow_weavile:['Sneasel','Weavile'],mega_salamence:['Bagon','Shelgon','Salamence'],
+  shadow_crawdaunt:['Corphish','Crawdaunt'],shadow_absol:['Absol'],
+  mega_banette:['Shuppet','Banette'],tyranitar:['Larvitar','Pupitar','Tyranitar'],
+  shadow_hariyama:['Makuhita','Hariyama'],shadow_sceptile:['Treecko','Grovyle','Sceptile'],
+  shadow_entei:['Entei'],mega_houndoom:['Houndour','Houndoom'],
+  mega_swampert:['Mudkip','Marshtomp','Swampert'],mega_heracross:['Heracross'],
+  shadow_aerodactyl:['Aerodactyl'],mewtwo:['Mewtwo'],shadow_zapdos:['Zapdos'],
+  mega_aerodactyl:['Aerodactyl'],mega_alakazam:['Abra','Kadabra','Alakazam'],
+  mega_pidgeot:['Pidgey','Pidgeotto','Pidgeot'],mega_venusaur:['Bulbasaur','Ivysaur','Venusaur'],
+  mega_falinks:['Falinks'],mega_victreebel:['Bellsprout','Weepinbell','Victreebel'],
+  shadow_tornadus_i:['Tornadus'],shadow_aurorus:['Amaura','Aurorus'],
+  shadow_samurott:['Oshawott','Dewott','Samurott'],shadow_annihilape:['Mankey','Primeape','Annihilape'],
+  zarude:['Zarude'],pheromosa:['Pheromosa'],toucannon:['Pikipek','Trumbeak','Toucannon'],
+  xerneas:['Xerneas'],vikavolt:['Grubbin','Charjabug','Vikavolt'],
+  meowscarada:['Sprigatito','Floragato','Meowscarada'],dhelmise:['Dhelmise'],
+  dragapult:['Dreepy','Drakloak','Dragapult'],rillaboom:['Grookey','Thwackey','Rillaboom'],
+  hatterene:['Hatenna','Hattrem','Hatterene'],inteleon:['Sobble','Drizzile','Inteleon'],
+  naganadel:['Poipole','Naganadel'],azelf:['Azelf'],gigalith:['Roggenrola','Boldore','Gigalith'],
+  landorus_i:['Landorus'],regigigas:['Regigigas'],excadrill:['Drilbur','Excadrill'],
+  kyurem:['Kyurem'],dialga:['Dialga'],tyrantrum:['Tyrunt','Tyrantrum'],
+  shadow_golurk:['Golett','Golurk'],greninja:['Froakie','Frogadier','Greninja'],
+  delphox:['Fennekin','Braixen','Delphox'],galarian_darmanitan:['Galarian Darumaka','Galarian Darmanitan'],
+  zoroark:['Zorua','Zoroark'],shadow_unfezant:['Pidove','Tranquill','Unfezant'],
+  darmanitan:['Darumaka','Darmanitan'],hisuian_zoroark:['Hisuian Zorua','Hisuian Zoroark'],
+  glaceon:['Eevee','Glaceon'],shadow_tangrowth:['Tangela','Tangrowth'],kyogre:['Kyogre'],
+  shadow_toxicroak:['Croagunk','Toxicroak'],electivire:['Elekid','Electabuzz','Electivire'],
+  magnezone:['Magnemite','Magneton','Magnezone'],roserade:['Budew','Roselia','Roserade'],
+  weavile:['Sneasel','Weavile'],honchkrow:['Murkrow','Honchkrow'],
+  shadow_luxray:['Shinx','Luxio','Luxray'],staraptor:['Starly','Staravia','Staraptor'],
+  shadow_empoleon:['Piplup','Prinplup','Empoleon'],latios:['Latios'],
+  shadow_infernape:['Chimchar','Monferno','Infernape'],shadow_torterra:['Turtwig','Grotle','Torterra'],
+  mega_lopunny:['Buneary','Lopunny'],mega_gallade:['Ralts','Kirlia','Gallade'],
+  shadow_manectric:['Electrike','Manectric'],ho_oh:['Ho-Oh'],raikou:['Raikou'],
+  gardevoir:['Ralts','Kirlia','Gardevoir'],swampert:['Mudkip','Marshtomp','Swampert'],
+  breloom:['Shroomish','Breloom'],shadow_lugia:['Lugia'],shadow_granbull:['Snubbull','Granbull'],
+  mega_scizor:['Scyther','Scizor'],shadow_feraligatr:['Totodile','Croconaw','Feraligatr'],
+  moltres:['Moltres'],shadow_articuno:['Articuno'],mega_ampharos:['Mareep','Flaaffy','Ampharos'],
+  mega_charizard_x:['Charmander','Charmeleon','Charizard'],shadow_entei_b:['Entei'],
+  enamorus_therian:['Enamorus'],shadow_electabuzz:['Elekid','Electabuzz','Electivire'],
+  mega_steelix:['Onix','Steelix'],origin_dialga:['Dialga'],
+  shadow_alakazam:['Abra','Kadabra','Alakazam'],shadow_victreebel:['Bellsprout','Weepinbell','Victreebel'],
+  mega_beedrill:['Weedle','Kakuna','Beedrill'],shadow_piloswine:['Swinub','Piloswine'],
+  shadow_porygon_z:['Porygon','Porygon2','Porygon-Z'],mega_lopunny:['Buneary','Lopunny'],
+};
+
+function parseLeekDuckText(text) {
+  if (!text || text.length < 100) return null;
+  // Event name
+  const nameMatch = text.match(/^#\s+(.+)$/m);
+  const eventName = nameMatch ? nameMatch[1].trim() : 'Event';
+  // End date
+  const endPatterns = [
+    /Ends:\s*\n?\s*([^\n]{5,60}(?:Local Time|PM|AM))/i,
+    /to\s+([A-Za-z]+day,\s+[A-Za-z]+ \d+,\s+\d{4}[^\n]*(?:Local Time|PM|AM)[^\n]*)/i,
+  ];
+  let endStr = null;
+  for (const pat of endPatterns) { const m = text.match(pat); if (m) { endStr = m[1].trim(); break; } }
+  // Spawns section
+  const lower = text.toLowerCase();
+  const sectionStart = ['wild encounters','## spawns','wild pokémon'].reduce((best, s) => {
+    const idx = lower.indexOf(s); return (idx !== -1 && (best === -1 || idx < best)) ? idx : best;
+  }, -1);
+  if (sectionStart === -1) return { eventName, endStr, spawns: [] };
+  const sectionEndCandidates = ['## raids','## research','## field research','## go pass','## sales','## features','## graphic']
+    .map(s => lower.indexOf(s, sectionStart + 10)).filter(i => i !== -1);
+  const sectionEnd = sectionEndCandidates.length ? Math.min(...sectionEndCandidates) : sectionStart + 3000;
+  const spawnSection = text.slice(sectionStart, sectionEnd);
+
+  const spawnNames = new Set();
+  const lines = spawnSection.split('\n').map(l => l.trim()).filter(Boolean);
+  let lastWasImage = false;
+  for (const line of lines) {
+    if (line.includes('cdn.leekduck') || line.startsWith('![')) { lastWasImage = true; continue; }
+    if (lastWasImage && line.length > 1 && line.length < 45 && !/^[#*\-!]/.test(line) && !/^\d/.test(line)) {
+      spawnNames.add(line.replace(/\s*\([^)]*\)\s*$/, '').trim()); // base name
+      spawnNames.add(line.trim()); // full name with forme
+    }
+    lastWasImage = false;
+  }
+  // Also catch dash-list Pokémon names
+  (spawnSection.match(/^-\s+([A-Z][a-zA-Zéèê'\-\. ]{1,30})$/gm) || []).forEach(m => {
+    const name = m.replace(/^-\s+/, '').replace(/\s*\(.*\)/, '').trim();
+    if (name.length > 1) spawnNames.add(name);
+  });
+  return { eventName, endStr, spawns: [...spawnNames] };
+}
+
+function parseSpawnPage(text) {
+  const resultsEl = document.getElementById('spawn-results');
+  if (!text || text.length < 200) { resultsEl.innerHTML = ''; return; }
+  const parsed = parseLeekDuckText(text);
+  if (!parsed) { resultsEl.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px 0;">Could not parse. Paste a full LeekDuck event page.</div>'; return; }
+  const { eventName, endStr, spawns } = parsed;
+  if (!spawns.length) {
+    resultsEl.innerHTML = `<div style="color:var(--text3);font-size:12px;padding:8px 0;">No wild spawns found. Try including the Spawns section of the page.</div>`;
+    return;
+  }
+  const spawnSet = new Set(spawns.map(s => s.toLowerCase()));
+  const matches = [];
+  ATTACKERS.forEach(atk => {
+    const candyFrom = ATK_CANDY_FROM[atk.key] || [];
+    const hit = candyFrom.filter(p => spawnSet.has(p.toLowerCase()));
+    if (!hit.length) return;
+    const copies = DB.attackers?.[atk.key] || [];
+    const { priority, bestIv, maxLevel } = getAdvisorPriority(atk, copies);
+    matches.push({ atk, hit, copies, priority, bestIv, maxLevel });
+  });
+  if (!matches.length) {
+    resultsEl.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-top:8px;"><b>${eventName}</b><br>Spawns: ${spawns.slice(0,8).join(', ')}<br>None match your tracked attackers.</div>`;
+    return;
+  }
+  const ORDER = { catch:0, upgrade:1, candy:2, xl:3, covered:4 };
+  matches.sort((a,b) => ORDER[a.priority] - ORDER[b.priority]);
+  const pColor = { catch:'var(--green)', upgrade:'var(--gold)', candy:'var(--blue)', xl:'var(--purple)', covered:'var(--text3)' };
+  const pLabel = { catch:'🎯 Get one', upgrade:'⬆️ Better IV available', candy:'🍬 Farm candy', xl:'💎 Farm XL candy', covered:'✅ Covered' };
+  const tierColor = t => t==='S+'?'#ff4444':t==='S'?'var(--red)':t==='A+'?'var(--orange)':t==='A'?'var(--gold)':'var(--blue)';
+  const tierBg    = t => t==='S+'?'rgba(244,91,91,0.2)':t==='S'?'var(--red-bg)':t==='A+'?'var(--orange-bg)':t==='A'?'var(--gold-bg)':'var(--blue-bg)';
+  resultsEl.innerHTML = `
+    <div style="margin-top:10px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:2px;">${eventName}</div>
+      ${endStr ? `<div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Ends: ${endStr}</div>` : ''}
+      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">Wild spawns found: ${spawns.slice(0,10).join(', ')}${spawns.length>10?` +${spawns.length-10} more`:''}</div>
+      ${matches.map(m=>`
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:var(--text);">${m.atk.name}</div>
+            <div style="font-size:10px;font-weight:700;color:${pColor[m.priority]};margin-top:2px;">${pLabel[m.priority]}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px;">
+              Catch <b>${m.hit.join(', ')}</b> for candy
+              ${m.maxLevel?` · Lvl ${m.maxLevel}${m.bestIv!==null?', '+m.bestIv+'% IV':''}`:m.copies.length?' · Owned':'  · Not owned yet'}
+            </div>
+          </div>
+          <span class="badge" style="flex-shrink:0;font-size:10px;background:${tierBg(m.atk.tier)};color:${tierColor(m.atk.tier)};">${m.atk.tier}</span>
+        </div>`).join('')}
+      <div style="font-size:10px;color:var(--text3);margin-top:8px;text-align:right;">Source: LeekDuck</div>
+    </div>`;
+}
+
+// ===================== ATTACKERS =====================
 // Source: PokéBase attackers tier list (June 2026)
 // tier: S | A+ | A | B+ | B
 // tags: shadow, mega, primal, origin, crowned, forme
@@ -4353,6 +4585,7 @@ function renderAnalyticsSpending(qOpts, dateLabel) {
   const totalGym      = sumField(gymRows, 'coins');
   const totalUSD      = sumField(gcs, 'usd');
   const totalINR      = sumField(gcs, 'inr');
+  const totalGymUSD   = gymCoinsToUSD(totalGym);
 
   // Stat cards
   document.getElementById('an-spend-stats').innerHTML = [
@@ -4360,6 +4593,7 @@ function renderAnalyticsSpending(qOpts, dateLabel) {
     { label: 'INR spent',       val: `₹${totalINR.toLocaleString()}`,    color: 'gold'   },
     { label: 'Coins purchased', val: totalPurchased.toLocaleString(),    color: 'blue'   },
     { label: 'Gym coins',       val: totalGym.toLocaleString(),          color: 'green'  },
+    ...(totalGymUSD > 0 ? [{ label: 'Gym coin value', val: `~$${totalGymUSD.toFixed(2)}`, color: 'green' }] : []),
     { label: 'Coins spent',     val: totalSpent.toLocaleString(),        color: 'red'    },
     { label: 'Net coins',       val: (totalPurchased + totalGym - totalSpent).toLocaleString(), color: totalPurchased + totalGym >= totalSpent ? 'green' : 'red' },
   ].map(s => `<div class="stat-card"><div class="stat-label">${s.label}</div><div class="stat-value ${s.color}">${s.val}</div></div>`).join('');
