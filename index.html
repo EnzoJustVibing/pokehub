@@ -943,6 +943,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   </div>
 
   <div class="manage-section">
+    <div class="manage-title">Local backups <span style="font-weight:400;font-size:11px;color:var(--text3);">Last 5 auto-snapshots · stored in this browser only</span></div>
+    <div id="backup-list"></div>
+  </div>
+
+  <div class="manage-section">
     <div class="manage-title">Data</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn" onclick="exportData()">Export JSON</button>
@@ -1381,8 +1386,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 <script>
 // ===================== DATA MODEL =====================
 const STORAGE_KEY   = 'pokehub_v1';
-const SYNC_KEY      = 'pokehub_sync_config'; // stored separately — never in DB export
+const SYNC_KEY      = 'pokehub_sync_config';
 const GIST_FILENAME = 'pokehub.json';
+const BACKUP_KEY    = 'pokehub_backups';
+const MAX_BACKUPS   = 5;
 let DB = {
   dexData: {},       // { "standard:25": { attr0: true, attr1: false, ... }, ... }
   customPokes: [],   // [{ id, name, dex, baseId }]
@@ -1431,7 +1438,8 @@ let DB = {
 
 function saveDB() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(DB)); } catch(e) {}
-  syncInBackground(); // non-blocking — fires and forgets
+  saveBackup();           // rotating local snapshot (last 5)
+  syncInBackground();     // non-blocking Gist push
 }
 function loadDB() {
   try {
@@ -2668,6 +2676,7 @@ function renderManage() {
   document.getElementById('trainer-start-km').value     = ts.km     || '';
   // Sync config
   renderSyncConfig();
+  renderBackups();
 }
 
 function setManageAttrDex(v) { manageAttrDex = v; renderManage(); }
@@ -5528,11 +5537,82 @@ async function syncNow() {
   await pullFromGist();
 }
 
-// Silent background sync after every save — non-blocking, no toast
+// ===================== AUTO-BACKUP =====================
+// Rotating local backup — last 5 snapshots, stored independently of main DB
+
+function saveBackup() {
+  try {
+    const backups = JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]');
+    backups.unshift({ savedAt: new Date().toISOString(), data: JSON.stringify(DB) });
+    if (backups.length > MAX_BACKUPS) backups.length = MAX_BACKUPS;
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(backups));
+  } catch(e) { /* storage full or unavailable — silently skip */ }
+}
+
+function getBackups() {
+  try { return JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]'); } catch(e) { return []; }
+}
+
+function restoreBackup(idx) {
+  const backups = getBackups();
+  if (!backups[idx]) return;
+  if (!confirm(`Restore backup from ${backups[idx].savedAt}? This will overwrite current data.`)) return;
+  try {
+    DB = Object.assign(DB, JSON.parse(backups[idx].data));
+    saveDB();
+    renderAll();
+    renderBackups();
+    toast('Backup restored ✓');
+  } catch(e) { toast('Restore failed: ' + e.message); }
+}
+
+function renderBackups() {
+  const el = document.getElementById('backup-list');
+  if (!el) return;
+  const backups = getBackups();
+  if (!backups.length) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--text3);">No backups yet — backups are created automatically when you save data.</div>`;
+    return;
+  }
+  el.innerHTML = backups.map((b, i) => {
+    const d = new Date(b.savedAt);
+    const label = d.toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    const size  = Math.round(b.data.length / 1024);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;">
+      <span style="flex:1;color:var(--text2);">${label}</span>
+      <span style="color:var(--text3);">${size}KB</span>
+      <button class="btn sm" onclick="restoreBackup(${i})">Restore</button>
+    </div>`;
+  }).join('');
+}
+
+// Silent background sync — checks remote timestamp before pushing to avoid overwriting newer remote data
 async function syncInBackground() {
   if (!syncConfigured()) return;
   try {
     updateSyncStatus('syncing');
+
+    // First peek at remote timestamp
+    const data = await gistFetch('GET');
+    const content = data?.files?.[GIST_FILENAME]?.content;
+
+    if (content) {
+      const remote = JSON.parse(content);
+      const remoteTime = remote?._syncedAt || 0;
+      const localTime  = DB._syncedAt || 0;
+
+      if (remoteTime > localTime) {
+        // Remote is newer — pull it in instead of overwriting
+        delete remote._syncedAt;
+        DB = Object.assign(DB, remote);
+        saveDB();
+        renderAll();
+        updateSyncStatus('conflict');
+        return; // don't push — we just pulled
+      }
+    }
+
+    // Local is newer or remote is empty — safe to push
     const payload = { ...DB, _syncedAt: Date.now() };
     await gistFetch('PATCH', {
       files: { [GIST_FILENAME]: { content: JSON.stringify(payload, null, 2) } }
