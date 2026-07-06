@@ -4675,28 +4675,33 @@ function renderAnalytics() {
 
 // --- Spending analytics ---
 function renderAnalyticsSpending(qOpts, dateLabel) {
-  const spends  = query('coinSpends',    qOpts);
+  const spends    = query('coinSpends',    qOpts);
   const purchases = query('coinPurchases', qOpts);
-  const gymRows = query('gymCoins',      qOpts);
-  const gcs     = query('giftCards',     { dateFrom: qOpts.dateFrom, dateTo: qOpts.dateTo }); // GCs are not per-account
+  const gymRows   = query('gymCoins',      qOpts);
+  const gcs       = query('giftCards',     { dateFrom: qOpts.dateFrom, dateTo: qOpts.dateTo }); // GCs are not per-account
+  const inrSpends = query('inrSpends',     { dateFrom: qOpts.dateFrom, dateTo: qOpts.dateTo }); // direct INR purchases
 
-  const totalSpent    = sumCoinsSpent(spends);
+  const totalSpent     = sumCoinsSpent(spends);
   const totalPurchased = sumField(purchases, 'coins');
-  const totalGym      = sumField(gymRows, 'coins');
-  const totalUSD      = sumField(gcs, 'usd');
-  const totalINR      = sumField(gcs, 'inr');
-  const totalGymUSD   = gymCoinsToUSD(totalGym);
+  const totalGym       = sumField(gymRows, 'coins');
+  const totalUSD       = sumField(gcs, 'usd');
+  const totalGCInr     = sumField(gcs, 'inr');
+  const totalGymUSD    = gymCoinsToUSD(totalGym);
+  const totalDirectINR = sumField(inrSpends, 'inr');
+  const { usdPerInr }  = getEffectiveRates();
+  const directINRusd   = totalDirectINR * usdPerInr;
 
   // Stat cards
   document.getElementById('an-spend-stats').innerHTML = [
-    { label: 'USD spent',       val: `$${totalUSD.toFixed(2)}`,         color: 'blue'   },
-    { label: 'INR spent',       val: `₹${totalINR.toLocaleString()}`,    color: 'gold'   },
-    { label: 'Coins purchased', val: totalPurchased.toLocaleString(),    color: 'blue'   },
-    { label: 'Gym coins',       val: totalGym.toLocaleString(),          color: 'green'  },
-    ...(totalGymUSD > 0 ? [{ label: 'Gym coin value', val: `~$${totalGymUSD.toFixed(2)}`, color: 'green' }] : []),
-    { label: 'Coins spent',     val: totalSpent.toLocaleString(),        color: 'red'    },
-    { label: 'Net coins',       val: (totalPurchased + totalGym - totalSpent).toLocaleString(), color: totalPurchased + totalGym >= totalSpent ? 'green' : 'red' },
-  ].map(s => `<div class="stat-card"><div class="stat-label">${s.label}</div><div class="stat-value ${s.color}">${s.val}</div></div>`).join('');
+    { label: 'USD spent (gift cards)', val: `$${totalUSD.toFixed(2)}`,            color: 'blue',   tip: null },
+    { label: 'INR (gift cards)',        val: `₹${totalGCInr.toLocaleString()}`,    color: 'gold',   tip: null },
+    ...(totalDirectINR > 0 ? [{ label: 'Direct INR spent', val: `₹${totalDirectINR.toLocaleString()}`, color: 'orange', tip: `≈ $${directINRusd.toFixed(2)} USD at your exchange rate` }] : []),
+    { label: 'Coins purchased',         val: totalPurchased.toLocaleString(),      color: 'blue',   tip: null },
+    { label: 'Gym coins',               val: totalGym.toLocaleString(),            color: 'green',  tip: null },
+    ...(totalGymUSD > 0 ? [{ label: 'Gym coin value', val: `~$${totalGymUSD.toFixed(2)}`, color: 'green', tip: null }] : []),
+    { label: 'Coins spent',             val: totalSpent.toLocaleString(),          color: 'red',    tip: null },
+    { label: 'Net coins',               val: (totalPurchased + totalGym - totalSpent).toLocaleString(), color: totalPurchased + totalGym >= totalSpent ? 'green' : 'red', tip: null },
+  ].map(s => `<div class="stat-card"${s.tip ? ` title="${s.tip}" style="cursor:help;"` : ''}><div class="stat-label">${s.label}</div><div class="stat-value ${s.color}">${s.val}</div>${s.tip ? `<div style="font-size:10px;color:var(--text3);margin-top:2px;">${s.tip}</div>` : ''}</div>`).join('');
 
   // Category breakdown bar chart
   const byCat = groupBy(spends, r => r.category || 'Other');
