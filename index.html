@@ -1380,8 +1380,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
 <script>
 // ===================== DATA MODEL =====================
-const STORAGE_KEY = 'pokehub_v1';
-const SYNC_KEY    = 'pokehub_sync_config'; // stored separately — never in DB export
+const STORAGE_KEY   = 'pokehub_v1';
+const SYNC_KEY      = 'pokehub_sync_config'; // stored separately — never in DB export
+const GIST_FILENAME = 'pokehub.json';
 let DB = {
   dexData: {},       // { "standard:25": { attr0: true, attr1: false, ... }, ... }
   customPokes: [],   // [{ id, name, dex, baseId }]
@@ -5443,9 +5444,6 @@ function updateSyncStatus(state, msg) {
     lastEl.textContent = 'Last synced ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
   }
 }
-
-// Gist filename constant
-const GIST_FILENAME = 'pokehub.json';
 
 async function gistFetch(method, body) {
   const cfg = getSyncConfig();
