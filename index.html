@@ -1390,6 +1390,7 @@ const SYNC_KEY      = 'pokehub_sync_config';
 const GIST_FILENAME = 'pokehub.json';
 const BACKUP_KEY    = 'pokehub_backups';
 const MAX_BACKUPS   = 5;
+let   _lastPullAt   = 0; // throttle for visibility-based pull
 let DB = {
   dexData: {},       // { "standard:25": { attr0: true, attr1: false, ... }, ... }
   customPokes: [],   // [{ id, name, dex, baseId }]
@@ -5520,6 +5521,7 @@ async function pullFromGist() {
       saveDB();
       renderAll();
       updateSyncStatus('ok');
+      _lastPullAt = Date.now();
       toast('Pulled from Gist ✓');
     } else {
       // Local is newer OR equal (includes first-time sync where both are 0) — push local
@@ -5586,33 +5588,12 @@ function renderBackups() {
   }).join('');
 }
 
-// Silent background sync — checks remote timestamp before pushing to avoid overwriting newer remote data
+// Silent background sync — simple push after every save
+// Pull happens on tab focus (see visibilitychange handler below) to catch remote changes
 async function syncInBackground() {
   if (!syncConfigured()) return;
   try {
     updateSyncStatus('syncing');
-
-    // First peek at remote timestamp
-    const data = await gistFetch('GET');
-    const content = data?.files?.[GIST_FILENAME]?.content;
-
-    if (content) {
-      const remote = JSON.parse(content);
-      const remoteTime = remote?._syncedAt || 0;
-      const localTime  = DB._syncedAt || 0;
-
-      if (remoteTime > localTime) {
-        // Remote is newer — pull it in instead of overwriting
-        delete remote._syncedAt;
-        DB = Object.assign(DB, remote);
-        saveDB();
-        renderAll();
-        updateSyncStatus('conflict');
-        return; // don't push — we just pulled
-      }
-    }
-
-    // Local is newer or remote is empty — safe to push
     const payload = { ...DB, _syncedAt: Date.now() };
     await gistFetch('PATCH', {
       files: { [GIST_FILENAME]: { content: JSON.stringify(payload, null, 2) } }
@@ -5622,6 +5603,19 @@ async function syncInBackground() {
     updateSyncStatus('error', 'Auto-sync failed');
   }
 }
+
+// Pull from Gist when tab becomes visible — catches changes made on other devices
+// Safer than checking on every push (avoids double network requests on save)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && syncConfigured()) {
+    const now = Date.now();
+    // Throttle: only pull if it's been more than 60 seconds since last pull
+    if (now - _lastPullAt > 60000) {
+      _lastPullAt = now;
+      pullFromGist();
+    }
+  }
+});
 
 // Populate sync config inputs in Manage when the page renders
 function renderSyncConfig() {
