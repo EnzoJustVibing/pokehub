@@ -2450,7 +2450,12 @@ function renderRaids() {
     account:  filterAcct   || undefined,
     tier:     filterTier   || undefined,
     result:   filterResult || undefined,
-  }).sort((a,b) => new Date(b.date)-new Date(a.date));
+  }).sort((a,b) => {
+    const dateDiff = new Date(b.date) - new Date(a.date);
+    if (dateDiff !== 0) return dateDiff;
+    // Same date — sort by original array index descending (most recently entered first)
+    return (DB.raids||[]).indexOf(b) - (DB.raids||[]).indexOf(a);
+  });
 
   // Stats always use unfiltered full set
   const all            = DB.raids || [];
