@@ -1274,7 +1274,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
       </div>
       <div class="form-group">
         <label class="form-label">Boss</label>
-        <input class="form-input" type="text" id="raid-boss" placeholder="e.g. Mewtwo">
+        <input class="form-input" type="text" id="raid-boss" placeholder="e.g. Mega Mewtwo Y"
+          list="raid-boss-list" oninput="autoFillSpecies(this.value)">
+        <datalist id="raid-boss-list"></datalist>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Species <span style="font-size:10px;color:var(--text3);font-weight:400;">what you catch</span></label>
+        <input class="form-input" type="text" id="raid-species" placeholder="e.g. Mewtwo"
+          list="raid-species-list">
+        <datalist id="raid-species-list"></datalist>
       </div>
       <div class="form-group">
         <label class="form-label">Tier</label>
@@ -2374,6 +2382,13 @@ function setSpendAcct(a) { spendAcct = a; renderSpending(); }
 // ===================== RAIDS =====================
 const TIER_COLORS = { '1★':'teal','3★':'blue','5★':'purple','Mega':'gold','Elite':'red' };
 
+function autoFillSpecies(boss) {
+  const speciesEl = document.getElementById('raid-species');
+  if (speciesEl && !speciesEl.value) {
+    speciesEl.value = bossToSpecies(boss);
+  }
+}
+
 function saveRaid() {
   const boss = document.getElementById('raid-boss').value.trim();
   const date = document.getElementById('raid-date').value;
@@ -2382,6 +2397,7 @@ function saveRaid() {
   if (!boss || !date) { toast('Enter boss name and date'); return; }
   const entry = {
     id: editId || uid(), date, account, boss,
+    species: document.getElementById('raid-species').value.trim() || bossToSpecies(boss),
     tier: document.getElementById('raid-tier').value,
     passType: document.getElementById('raid-pass').value,
     result: document.getElementById('raid-result').value,
@@ -2400,8 +2416,9 @@ function saveRaid() {
   }
   saveDB(); closeModal('modal-raid'); renderRaids();
   toast(editId ? 'Raid updated' : `${boss} raid logged`);
-  document.getElementById('raid-boss').value = '';
-  document.getElementById('raid-notes').value = '';
+  document.getElementById('raid-boss').value    = '';
+  document.getElementById('raid-species').value = '';
+  document.getElementById('raid-notes').value   = '';
   document.getElementById('raid-edit-id').value = '';
   document.getElementById('raid-date').value = '';
 }
@@ -2415,7 +2432,8 @@ function editRaid(id) {
   document.getElementById('raid-edit-id').value = r.id;
   document.getElementById('raid-date').value = r.date;
   acctEl.value = r.account;
-  document.getElementById('raid-boss').value = r.boss || '';
+  document.getElementById('raid-boss').value    = r.boss || '';
+  document.getElementById('raid-species').value = r.species || bossToSpecies(r.boss || '');
   document.getElementById('raid-tier').value = r.tier || '5★';
   document.getElementById('raid-pass').value = r.passType || 'free';
   document.getElementById('raid-result').value = r.result || 'Win';
@@ -2796,8 +2814,21 @@ function openModal(id) {
   }
   // Reset raid modal to "add" mode
   if (id === 'modal-raid') {
-    document.getElementById('raid-edit-id').value = '';
+    document.getElementById('raid-edit-id').value  = '';
     document.getElementById('raid-modal-title').textContent = 'Log raid';
+    document.getElementById('raid-boss').value    = '';
+    document.getElementById('raid-species').value = '';
+    document.getElementById('raid-notes').value   = '';
+    // Populate boss autocomplete datalist once
+    const bossList = document.getElementById('raid-boss-list');
+    if (bossList && !bossList.children.length) {
+      bossList.innerHTML = buildBossList().map(b => `<option value="${b}">`).join('');
+    }
+    const speciesList = document.getElementById('raid-species-list');
+    if (speciesList && !speciesList.children.length) {
+      const allSpecies = [...new Set(Object.values(BOSS_TO_SPECIES))].sort();
+      speciesList.innerHTML = allSpecies.map(s => `<option value="${s}">`).join('');
+    }
   }
   // Reset XP modal to "add" mode
   if (id === 'modal-xp-set') {
@@ -3533,8 +3564,128 @@ function parseSpawnPage(text) {
     </div>`;
 }
 
-// ===================== ATTACKERS =====================
-// Source: PokéBase attackers tier list (June 2026)
+// Maps raid boss name → base species for grouping in analytics
+// Handles megas, primals, shadows, formes — anything that catches as a base species
+const BOSS_TO_SPECIES = {
+  // Mewtwo forms
+  'Mega Mewtwo X': 'Mewtwo', 'Mega Mewtwo Y': 'Mewtwo', 'Shadow Mewtwo': 'Mewtwo',
+  // Kyurem forms
+  'White Kyurem': 'Kyurem', 'Black Kyurem': 'Kyurem',
+  // Necrozma forms
+  'Dusk Mane Necrozma': 'Necrozma', 'Dawn Wings Necrozma': 'Necrozma',
+  // Groudon/Kyogre primals
+  'Primal Groudon': 'Groudon', 'Primal Kyogre': 'Kyogre',
+  // Rayquaza
+  'Mega Rayquaza': 'Rayquaza',
+  // Lucario
+  'Mega Lucario': 'Lucario',
+  // Dialga/Palkia origin
+  'Dialga (Origin Forme)': 'Dialga', 'Palkia (Origin Forme)': 'Palkia',
+  // Giratina
+  'Giratina (Origin)': 'Giratina', 'Giratina (Altered)': 'Giratina',
+  'Shadow Giratina (Altered)': 'Giratina',
+  // Zacian/Zamazenta
+  'Zacian (Crowned Sword)': 'Zacian', 'Zamazenta (Crowned Shield)': 'Zamazenta',
+  // Keldeo
+  'Keldeo (Resolute)': 'Keldeo',
+  // Shaymin
+  'Shaymin (Sky Forme)': 'Shaymin',
+  // Hoopa
+  'Hoopa (Unbound)': 'Hoopa',
+  // Urshifu
+  'Urshifu (Single Strike)': 'Urshifu', 'Urshifu (Rapid Strike)': 'Urshifu',
+  // Enamorus
+  'Enamorus (Incarnate)': 'Enamorus', 'Enamorus (Therian)': 'Enamorus',
+  // Landorus
+  'Landorus (Incarnate)': 'Landorus', 'Landorus (Therian)': 'Landorus',
+  'Shadow Landorus (Incarnate)': 'Landorus',
+  // Thundurus/Tornadus
+  'Thundurus (Therian)': 'Thundurus', 'Shadow Tornadus (Incarnate)': 'Tornadus',
+  // Mega evolutions — catch the base
+  'Mega Charizard X': 'Charizard', 'Mega Charizard Y': 'Charizard',
+  'Mega Gengar': 'Gengar', 'Shadow Gengar': 'Gengar',
+  'Mega Gardevoir': 'Gardevoir', 'Shadow Gardevoir': 'Gardevoir',
+  'Mega Tyranitar': 'Tyranitar', 'Shadow Tyranitar': 'Tyranitar',
+  'Mega Garchomp': 'Garchomp', 'Shadow Garchomp': 'Garchomp',
+  'Mega Salamence': 'Salamence', 'Shadow Salamence': 'Salamence',
+  'Mega Metagross': 'Metagross', 'Shadow Metagross': 'Metagross',
+  'Mega Latios': 'Latios', 'Shadow Latios': 'Latios',
+  'Mega Latias': 'Latias',
+  'Mega Blaziken': 'Blaziken', 'Shadow Blaziken': 'Blaziken',
+  'Mega Sceptile': 'Sceptile', 'Shadow Sceptile': 'Sceptile',
+  'Mega Swampert': 'Swampert', 'Shadow Swampert': 'Swampert',
+  'Mega Aerodactyl': 'Aerodactyl', 'Shadow Aerodactyl': 'Aerodactyl',
+  'Mega Alakazam': 'Alakazam', 'Shadow Alakazam': 'Alakazam',
+  'Mega Houndoom': 'Houndoom',
+  'Mega Ampharos': 'Ampharos',
+  'Mega Scizor': 'Scizor',
+  'Mega Heracross': 'Heracross',
+  'Mega Absol': 'Absol', 'Shadow Absol': 'Absol',
+  'Mega Glalie': 'Glalie',
+  'Mega Abomasnow': 'Abomasnow',
+  'Mega Manectric': 'Manectric', 'Shadow Manectric': 'Manectric',
+  'Mega Banette': 'Banette',
+  'Mega Pidgeot': 'Pidgeot',
+  'Mega Venusaur': 'Venusaur',
+  'Mega Lopunny': 'Lopunny',
+  'Mega Gallade': 'Gallade',
+  'Mega Diancie': 'Diancie',
+  'Mega Beedrill': 'Beedrill',
+  'Mega Dragonite': 'Dragonite', 'Shadow Dragonite': 'Dragonite',
+  'Mega Steelix': 'Steelix',
+  'Mega Victreebel': 'Victreebel', 'Shadow Victreebel': 'Victreebel',
+  // Shadows — base species
+  'Shadow Reshiram': 'Reshiram', 'Shadow Palkia': 'Palkia',
+  'Shadow Dialga': 'Dialga', 'Shadow Heatran': 'Heatran',
+  'Shadow Groudon': 'Groudon', 'Shadow Kyogre': 'Kyogre',
+  'Shadow Ho-Oh': 'Ho-Oh', 'Shadow Lugia': 'Lugia',
+  'Shadow Raikou': 'Raikou', 'Shadow Entei': 'Entei',
+  'Shadow Moltres': 'Moltres', 'Shadow Zapdos': 'Zapdos',
+  'Shadow Articuno': 'Articuno',
+  'Shadow Rampardos': 'Rampardos', 'Shadow Rhyperior': 'Rhyperior',
+  'Shadow Machamp': 'Machamp', 'Shadow Hariyama': 'Hariyama',
+  'Shadow Conkeldurr': 'Conkeldurr', 'Shadow Annihilape': 'Annihilape',
+  'Shadow Hydreigon': 'Hydreigon', 'Shadow Darkrai': 'Darkrai',
+  'Shadow Chandelure': 'Chandelure', 'Shadow Honchkrow': 'Honchkrow',
+  'Shadow Weavile': 'Weavile', 'Shadow Crawdaunt': 'Crawdaunt',
+  'Shadow Mamoswine': 'Mamoswine', 'Shadow Electivire': 'Electivire',
+  'Shadow Magnezone': 'Magnezone', 'Shadow Excadrill': 'Excadrill',
+  'Shadow Regigigas': 'Regigigas', 'Shadow Gigalith': 'Gigalith',
+  'Shadow Tangrowth': 'Tangrowth', 'Shadow Roserade': 'Roserade',
+  'Shadow Kingler': 'Kingler', 'Shadow Feraligatr': 'Feraligatr',
+  'Shadow Empoleon': 'Empoleon', 'Shadow Infernape': 'Infernape',
+  'Shadow Torterra': 'Torterra', 'Shadow Luxray': 'Luxray',
+  'Shadow Toxicroak': 'Toxicroak', 'Shadow Granbull': 'Granbull',
+  'Shadow Moltres': 'Moltres',
+  'Shadow Darmanitan': 'Darmanitan',
+  'Shadow Samurott': 'Samurott', 'Shadow Unfezant': 'Unfezant',
+  'Shadow Chesnaught': 'Chesnaught', 'Shadow Delphox': 'Delphox',
+  'Shadow Emboar': 'Emboar', 'Shadow Toucannon': 'Toucannon',
+  'Shadow Vikavolt': 'Vikavolt', 'Shadow Tyrantrum': 'Tyrantrum',
+  'Shadow Greninja': 'Greninja', 'Shadow Aurorus': 'Aurorus',
+  'Shadow Golurk': 'Golurk', 'Shadow Porygon-Z': 'Porygon-Z',
+  'Shadow Piloswine': 'Piloswine',
+  // Hisuian forms
+  'Hisuian Zoroark': 'Zoroark',
+  // Galarian forms
+  'Galarian Darmanitan': 'Darmanitan',
+};
+
+// Derive species from boss name — falls back to boss name if no mapping
+function bossToSpecies(boss) {
+  if (!boss) return '';
+  return BOSS_TO_SPECIES[boss] || boss;
+}
+
+// Build boss suggestions list from ATTACKERS names + common non-attacker bosses
+function buildBossList() {
+  const fromAttackers = ATTACKERS.map(a => a.name);
+  const extra = ['Mewtwo','Kyurem','Dialga','Palkia','Groudon','Kyogre','Rayquaza',
+    'Giratina (Altered)','Giratina (Origin)','Ho-Oh','Lugia','Necrozma'];
+  return [...new Set([...fromAttackers, ...extra])].sort();
+}
+
+
 // tier: S | A+ | A | B+ | B
 // tags: shadow, mega, primal, origin, crowned, forme
 const ATTACKERS = [
@@ -4850,14 +5001,19 @@ function renderAnalyticsRaids(qOpts, dateLabel) {
     ] : []),
   ].map(s => `<div class="stat-card"><div class="stat-label">${s.label}</div><div class="stat-value ${s.color}">${s.val}</div></div>`).join('');
 
-  // Boss bar chart (top 10 by count)
-  const byBoss = groupBy(raids, r => r.boss || 'Unknown');
-  const bossItems = Object.entries(byBoss)
-    .map(([boss, rows]) => ({ label: boss, value: rows.length, color: 'var(--blue)' }))
+  // Group by species (primary) and boss (secondary)
+  // Species falls back to boss for raids logged before this feature
+  const getSpecies = r => r.species || bossToSpecies(r.boss || '') || r.boss || 'Unknown';
+  const bySpecies = groupBy(raids, getSpecies);
+  const byBoss    = groupBy(raids, r => r.boss || 'Unknown');
+
+  // Boss bar chart — by species for cleaner view
+  const bossItems = Object.entries(bySpecies)
+    .map(([sp, rows]) => ({ label: sp, value: rows.length, color: 'var(--blue)' }))
     .sort((a,b) => b.value - a.value).slice(0, 10);
 
   document.getElementById('an-raid-boss-chart').innerHTML = `
-    <div class="an-chart-title">Raids by boss (top 10) <span style="font-weight:400;color:var(--text3);font-size:11px;">${dateLabel}</span></div>
+    <div class="an-chart-title">Raids by species (top 10) <span style="font-weight:400;color:var(--text3);font-size:11px;">${dateLabel}</span></div>
     ${svgHBar(bossItems)}`;
 
   // Pass type bar chart
@@ -4871,36 +5027,47 @@ function renderAnalyticsRaids(qOpts, dateLabel) {
     <div class="an-chart-title">Pass type breakdown <span style="font-weight:400;color:var(--text3);font-size:11px;">${dateLabel}</span></div>
     ${svgHBar(passItems)}`;
 
-  // Per-boss stats table with cost columns
-  const bossStats = Object.entries(byBoss).map(([boss, rows]) => {
-    const bWins      = countWhere(rows, r => r.result === 'Win');
-    const bShinies   = countWhere(rows, r => r.shiny);
-    const bHundos    = countWhere(rows, r => r.hundo);
-    const bShinyRate = bWins > 0 ? ((bShinies/bWins)*100).toFixed(1) : null;
-    const bCost      = getRaidsCost(rows);
-    const bCostPerShiny = bShinies > 0 && bCost.totalUSD > 0
-      ? '$' + (bCost.totalUSD / bShinies).toFixed(2) : null;
-    return { boss, count: rows.length, wins: bWins, shinies: bShinies, hundos: bHundos,
-             shinyRate: bShinyRate, cost: bCost, costPerShiny: bCostPerShiny, _rows: rows };
+  // Per-species stats (primary rows) with per-boss breakdown (sub-rows)
+  const speciesStats = Object.entries(bySpecies).map(([species, rows]) => {
+    const sWins    = countWhere(rows, r => r.result === 'Win');
+    const sShinies = countWhere(rows, r => r.shiny);
+    const sHundos  = countWhere(rows, r => r.hundo);
+    const sShinyRate = sWins > 0 ? ((sShinies/sWins)*100).toFixed(1) : null;
+    const sCost    = getRaidsCost(rows);
+    const sCostPerShiny = sShinies > 0 && sCost.totalUSD > 0
+      ? '$' + (sCost.totalUSD / sShinies).toFixed(2) : null;
+
+    // Boss breakdown within this species
+    const bossesSeen = [...new Set(rows.map(r => r.boss || species))];
+    const hasBossDetail = bossesSeen.length > 1 || bossesSeen[0] !== species;
+    const bossBreakdown = hasBossDetail ? bossesSeen.map(boss => {
+      const bRows    = rows.filter(r => (r.boss||species) === boss);
+      const bShinies = countWhere(bRows, r => r.shiny);
+      const bCost    = getRaidsCost(bRows);
+      return { boss, count: bRows.length, shinies: bShinies, cost: bCost };
+    }) : [];
+
+    return { species, count: rows.length, wins: sWins, shinies: sShinies, hundos: sHundos,
+             shinyRate: sShinyRate, cost: sCost, costPerShiny: sCostPerShiny,
+             bossBreakdown, _rows: rows };
   }).sort((a,b) => b.count - a.count);
 
-  // "Most expensive hunts" bar chart — USD spent per boss, sorted desc
-  const costItems = bossStats
-    .filter(b => b.cost.totalUSD > 0)
-    .map(b => ({
-      label: b.boss,
-      value: parseFloat(b.cost.totalUSD.toFixed(2)),
-      color: b.shinies > 0 ? 'var(--gold)' : 'var(--purple)',
+  // Cost chart — by species
+  const costItems = speciesStats
+    .filter(s => s.cost.totalUSD > 0)
+    .map(s => ({
+      label: s.species,
+      value: parseFloat(s.cost.totalUSD.toFixed(2)),
+      color: s.shinies > 0 ? 'var(--gold)' : 'var(--purple)',
     }))
     .sort((a,b) => b.value - a.value)
     .slice(0, 12);
 
   document.getElementById('an-raid-cost-chart').innerHTML = showCost && costItems.length
-    ? `<div class="an-chart-title">USD spent per boss <span style="font-weight:400;color:var(--text3);font-size:11px;">${dateLabel} · gold = got shiny</span></div>
+    ? `<div class="an-chart-title">USD spent per species <span style="font-weight:400;color:var(--text3);font-size:11px;">${dateLabel} · gold = got shiny</span></div>
        ${svgHBar(costItems, { fmt: v => '$'+v.toFixed(2) })}`
-    : `<div class="an-chart-title">USD spent per boss</div><div class="an-empty">${hasRates ? 'No paid raids logged yet' : 'Set starting coin balance and USD paid in Manage to enable cost tracking'}</div>`;
+    : `<div class="an-chart-title">USD spent per species</div><div class="an-empty">${hasRates ? 'No paid raids logged yet' : 'Set starting coin balance and USD paid in Manage to enable cost tracking'}</div>`;
 
-  // Cost rate footnote
   const rateNote = hasRates ? [
     `Remote: ${Math.round(remoteCoinsPerPass)} 🪙 (~$${remoteUSD.toFixed(2)})`,
     `Premium: ${Math.round(premiumCoinsPerPass)} 🪙 (~$${premiumUSD.toFixed(2)})`,
@@ -4908,42 +5075,48 @@ function renderAnalyticsRaids(qOpts, dateLabel) {
 
   document.getElementById('an-raid-boss-table').innerHTML = `
     <div class="an-chart-title">
-      Boss breakdown <span style="font-weight:400;color:var(--text3);font-size:11px;">${dateLabel}</span>
+      Species breakdown <span style="font-weight:400;color:var(--text3);font-size:11px;">${dateLabel}</span>
       ${rateNote ? `<span style="font-size:10px;color:var(--text3);margin-left:8px;">${rateNote}</span>` : ''}
     </div>
     <table class="an-boss-table">
       <thead><tr>
-        <th>Boss</th><th>Raids</th><th>Wins</th><th>Win%</th>
+        <th>Species</th><th>Raids</th><th>Wins</th><th>Win%</th>
         <th>Shiny</th><th>Shiny%</th><th>Hundo</th>
         ${showCost ? '<th>Coins</th><th>USD</th><th>$/shiny</th>' : ''}
       </tr></thead>
-      <tbody>${bossStats.map(b => `<tr>
-        <td style="font-weight:500">${b.boss}</td>
-        <td>${b.count}</td>
-        <td>${b.wins}</td>
-        <td style="color:var(--green)">${b.count > 0 ? ((b.wins/b.count)*100).toFixed(0)+'%' : '—'}</td>
-        <td>${b.shinies > 0 ? `<span class="badge gold">★ ${b.shinies}</span>` : '—'}</td>
-        <td style="color:var(--gold)">${b.shinyRate !== null ? b.shinyRate+'%' : '—'}</td>
-        <td>${b.hundos > 0 ? `<span class="badge purple">💯 ${b.hundos}</span>` : '—'}</td>
-        ${showCost ? `
-        <td style="color:var(--text2)">${b.cost.totalCoins > 0 ? Math.round(b.cost.totalCoins).toLocaleString() : '—'}</td>
-        <td style="color:var(--gold);font-weight:500">${b.cost.totalUSD > 0 ? '$'+b.cost.totalUSD.toFixed(2) : '—'}</td>
-        <td style="color:var(--green)">${b.costPerShiny || '—'}</td>` : ''}
-      </tr>`).join('')}</tbody>
+      <tbody>${speciesStats.map(s => `
+        <tr style="font-weight:500;">
+          <td>${s.species}</td>
+          <td>${s.count}</td>
+          <td>${s.wins}</td>
+          <td style="color:var(--green)">${s.count > 0 ? ((s.wins/s.count)*100).toFixed(0)+'%' : '—'}</td>
+          <td>${s.shinies > 0 ? `<span class="badge gold">★ ${s.shinies}</span>` : '—'}</td>
+          <td style="color:var(--gold)">${s.shinyRate !== null ? s.shinyRate+'%' : '—'}</td>
+          <td>${s.hundos > 0 ? `<span class="badge purple">💯 ${s.hundos}</span>` : '—'}</td>
+          ${showCost ? `
+          <td style="color:var(--text2)">${s.cost.totalCoins > 0 ? Math.round(s.cost.totalCoins).toLocaleString() : '—'}</td>
+          <td style="color:var(--gold);font-weight:600;">${s.cost.totalUSD > 0 ? '$'+s.cost.totalUSD.toFixed(2) : '—'}</td>
+          <td style="color:var(--green)">${s.costPerShiny || '—'}</td>` : ''}
+        </tr>
+        ${s.bossBreakdown.map(b => `
+        <tr style="opacity:0.65;font-size:11px;">
+          <td style="padding-left:18px;color:var(--text3);">↳ ${b.boss}</td>
+          <td>${b.count}</td>
+          <td>—</td><td>—</td>
+          <td>${b.shinies > 0 ? `<span class="badge gold" style="font-size:9px;">★ ${b.shinies}</span>` : '—'}</td>
+          <td>—</td><td>—</td>
+          ${showCost ? `
+          <td>—</td>
+          <td style="color:var(--text3)">${b.cost.totalUSD > 0 ? '$'+b.cost.totalUSD.toFixed(2) : '—'}</td>
+          <td>—</td>` : ''}
+        </tr>`).join('')}
+      `).join('')}</tbody>
     </table>
     ${showCost ? `<div style="font-size:11px;color:var(--text3);margin-top:10px;line-height:1.8;">
-      ${bossStats.filter(b=>b.cost.totalUSD>0).map(b => {
-        const passBreakdown = (() => {
-          const bByPass = groupBy(b._rows||[], r=>r.passType||'free');
-          return Object.entries(bByPass).filter(([t])=>t!=='free').map(([t,rs])=>{
-            const cpp = t==='remote'?remoteCoinsPerPass:premiumCoinsPerPass;
-            return `${rs.length}× ${t} (${Math.round(cpp)} 🪙 each)`;
-          }).join(', ');
-        })();
-        return `<b>${b.boss}:</b> ${b.count} raid${b.count!==1?'s':''} · ${b.cost.totalCoins>0?Math.round(b.cost.totalCoins).toLocaleString()+' 🪙':''} · $${b.cost.totalUSD.toFixed(2)} total${b.shinies>0?' · <span style="color:var(--gold)">★ shiny cost $'+b.cost.totalUSD.toFixed(2)+'</span>':''}`;
-      }).join('<br>')}
-    </div>` : ''}`;
-}
+      ${speciesStats.filter(s=>s.cost.totalUSD>0).map(s =>
+        `<b>${s.species}:</b> ${s.count} raid${s.count!==1?'s':''} · ${s.cost.totalCoins>0?Math.round(s.cost.totalCoins).toLocaleString()+' 🪙 · ':''}$${s.cost.totalUSD.toFixed(2)}${s.shinies>0?' · <span style="color:var(--gold)">★ shiny cost $'+(s.cost.totalUSD/s.shinies).toFixed(2)+'</span>':''}`
+      ).join('<br>')}
+    </div>` : ''}`;}
 
 
 // ===================== JOURNAL / ADVENTURE LOG =====================
