@@ -1275,13 +1275,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
       <div class="form-group">
         <label class="form-label">Boss</label>
         <input class="form-input" type="text" id="raid-boss" placeholder="e.g. Mega Mewtwo Y"
-          list="raid-boss-list" oninput="autoFillSpecies(this.value)">
+          list="raid-boss-list" onchange="autoFillSpecies(this.value)" onblur="autoFillSpecies(this.value)">
         <datalist id="raid-boss-list"></datalist>
       </div>
       <div class="form-group">
         <label class="form-label">Species <span style="font-size:10px;color:var(--text3);font-weight:400;">what you catch</span></label>
         <input class="form-input" type="text" id="raid-species" placeholder="e.g. Mewtwo"
-          list="raid-species-list">
+          list="raid-species-list" oninput="this.dataset.autoFilled='false'">
         <datalist id="raid-species-list"></datalist>
       </div>
       <div class="form-group">
@@ -2383,9 +2383,15 @@ function setSpendAcct(a) { spendAcct = a; renderSpending(); }
 const TIER_COLORS = { '1★':'teal','3★':'blue','5★':'purple','Mega':'gold','Elite':'red' };
 
 function autoFillSpecies(boss) {
+  if (!boss || boss.length < 3) return; // don't fire on partial input
   const speciesEl = document.getElementById('raid-species');
-  if (speciesEl && !speciesEl.value) {
-    speciesEl.value = bossToSpecies(boss);
+  if (!speciesEl) return;
+  const derived = bossToSpecies(boss);
+  // Only auto-fill if derived is different from boss (i.e. it's a known forme mapping)
+  // or if species field is empty
+  if (!speciesEl.value || speciesEl.dataset.autoFilled === 'true') {
+    speciesEl.value = derived;
+    speciesEl.dataset.autoFilled = 'true';
   }
 }
 
@@ -2818,6 +2824,7 @@ function openModal(id) {
     document.getElementById('raid-modal-title').textContent = 'Log raid';
     document.getElementById('raid-boss').value    = '';
     document.getElementById('raid-species').value = '';
+    document.getElementById('raid-species').dataset.autoFilled = 'false';
     document.getElementById('raid-notes').value   = '';
     // Populate boss autocomplete datalist once
     const bossList = document.getElementById('raid-boss-list');
@@ -4768,20 +4775,35 @@ function svgLine(points, opts = {}) {
   const vals  = points.map(p => p.value);
   const minV  = Math.min(...vals);
   const maxV  = Math.max(...vals);
-  const range = maxV - minV || 1;
   const color = opts.color || 'var(--blue)';
   const fmt   = opts.fmt   || (v => v.toLocaleString());
+  const useLog = opts.log && minV > 0;
+
+  // Scale functions — linear or log
+  const toScale   = v => useLog ? Math.log10(v) : v;
+  const minS      = toScale(minV);
+  const maxS      = toScale(maxV);
+  const rangeS    = maxS - minS || 1;
 
   const x = i => PL + (i / (points.length - 1)) * cW;
-  const y = v => PT + cH - ((v - minV) / range) * cH;
+  const y = v => PT + cH - ((toScale(v) - minS) / rangeS) * cH;
 
   // Path
   const pathD = points.map((p,i) => `${i===0?'M':'L'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
   // Area fill
   const areaD = pathD + ` L${x(points.length-1).toFixed(1)},${(PT+cH).toFixed(1)} L${PL},${(PT+cH).toFixed(1)} Z`;
 
-  // Y axis labels (3 ticks)
-  const yTicks = [minV, minV + range/2, maxV].map((v,i) => {
+  // Y axis labels (3 ticks) — on log scale use meaningful powers of 10
+  const yTickVals = useLog ? (() => {
+    const lo = Math.floor(minS), hi = Math.ceil(maxS);
+    const ticks = [];
+    for (let p = lo; p <= hi; p++) ticks.push(Math.pow(10, p));
+    // If too many, pick just 3
+    if (ticks.length > 4) return [ticks[0], ticks[Math.floor(ticks.length/2)], ticks[ticks.length-1]];
+    return ticks;
+  })() : [minV, minV + (maxV-minV)/2, maxV];
+
+  const yTicks = yTickVals.map(v => {
     const yy = y(v).toFixed(1);
     return `<text x="${PL-6}" y="${parseFloat(yy)+4}" text-anchor="end" font-size="10" fill="var(--text3)">${fmt(v)}</text>
             <line x1="${PL}" y1="${yy}" x2="${W-PR}" y2="${yy}" stroke="var(--border)" stroke-width="1"/>`;
@@ -4790,13 +4812,14 @@ function svgLine(points, opts = {}) {
   // X axis labels — first, middle, last
   const xIdxs = [0, Math.floor((points.length-1)/2), points.length-1];
   const xLabels = xIdxs.map(i => {
-    const lbl = points[i].date.slice(5); // MM-DD
+    const lbl = points[i].date.slice(5);
     return `<text x="${x(i).toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="10" fill="var(--text3)">${lbl}</text>`;
   }).join('');
 
-  // Dot at last point
+  // Dot and label at last point
   const lastX = x(points.length-1), lastY = y(points[points.length-1].value);
   const lastLbl = fmt(points[points.length-1].value);
+  const logNote = useLog ? `<text x="${PL}" y="${PT+8}" font-size="9" fill="var(--text3)" opacity="0.6">log scale</text>` : '';
 
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">
     <defs>
@@ -4805,6 +4828,7 @@ function svgLine(points, opts = {}) {
         <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
       </linearGradient>
     </defs>
+    ${logNote}
     ${yTicks}
     <path d="${areaD}" fill="url(#ag${opts.gid||0})"/>
     <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>
@@ -4944,7 +4968,7 @@ function renderAnalyticsXP(qOpts, dateLabel) {
 
   document.getElementById('an-xp-chart').innerHTML = `
     <div class="an-chart-title">XP/day pace <span style="font-weight:400;color:var(--text3);font-size:11px;">${dateLabel}</span></div>
-    ${linePoints.length >= 2 ? svgLine(linePoints, { color: 'var(--green)', gid: 2, fmt: v => v.toLocaleString() }) : linePoints.length === 1 ? `<div class="an-empty">${linePoints[0].value.toLocaleString()} XP/day — need more snapshots for trend</div>` : '<div class="an-empty">Need at least 3 snapshots in range to show trend</div>'}`;
+    ${linePoints.length >= 2 ? svgLine(linePoints, { color: 'var(--green)', gid: 2, fmt: v => v.toLocaleString(), log: true }) : linePoints.length === 1 ? `<div class="an-empty">${linePoints[0].value.toLocaleString()} XP/day — need more snapshots for trend</div>` : '<div class="an-empty">Need at least 3 snapshots in range to show trend</div>'}`;
 }
 
 // --- Raids analytics ---
