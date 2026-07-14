@@ -304,6 +304,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .medal-auto-badge { font-size:10px; color:var(--teal); background:var(--teal-bg); padding:1px 6px; border-radius:99px; display:inline-block; margin-left:4px; }
 @media(max-width:500px){ .medals-grid{ grid-template-columns:1fr 1fr; } }
 
+.bulk-qty-row { display:flex;align-items:center;gap:8px;margin-bottom:6px; }
+.bulk-qty-input { width:70px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:6px 8px;color:var(--text);font-size:13px;text-align:center; }
+.bulk-date-input { background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:6px 8px;color:var(--text);font-size:13px; }
+
 /* CONFIRM DELETE POPOVER */
 .confirm-pop { position:fixed; z-index:200; background:var(--bg2); border:1px solid var(--red); border-radius:var(--radius-lg); padding:12px 14px; box-shadow:0 8px 24px rgba(0,0,0,0.4); display:flex; flex-direction:column; gap:8px; min-width:180px; }
 .confirm-pop-msg { font-size:13px; color:var(--text); font-weight:500; }
@@ -548,7 +552,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <div>
       <div class="section-title">Raids</div>
     </div>
-    <button class="btn primary" onclick="openModal('modal-raid')">+ Log raid</button>
+    <div style="display:flex;gap:8px;">
+      <button class="btn" onclick="openBulkRaidModal()">⚡ Bulk log</button>
+      <button class="btn primary" onclick="openModal('modal-raid')">+ Log raid</button>
+    </div>
   </div>
   <div class="stats-grid" id="raid-stats"></div>
   <div class="controls-row" style="margin-bottom:12px;">
@@ -1259,6 +1266,74 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 </div>
 
 <!-- Raid modal -->
+<!-- Bulk raid log modal -->
+<div class="modal-overlay" id="modal-raid-bulk">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-title">⚡ Bulk log raids</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:14px;">Creates individual entries for each raid — all analytics work normally. Add shinies/hundos separately after.</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Boss</label>
+        <input class="form-input" type="text" id="bulk-boss" placeholder="e.g. Mega Mewtwo Y"
+          list="bulk-boss-list" onchange="autoFillBulkSpecies(this.value)" onblur="autoFillBulkSpecies(this.value)">
+        <datalist id="bulk-boss-list"></datalist>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Species <span style="font-size:10px;color:var(--text3);font-weight:400;">what you catch</span></label>
+        <input class="form-input" type="text" id="bulk-species" placeholder="e.g. Mewtwo"
+          oninput="this.dataset.autoFilled='false'">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tier</label>
+        <select class="form-select" id="bulk-tier">
+          <option>1★</option><option>3★</option><option selected>5★</option>
+          <option>Mega</option><option>Elite</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Pass type</label>
+        <select class="form-select" id="bulk-pass">
+          <option value="free">Free daily</option>
+          <option value="premium">Premium</option>
+          <option value="remote" selected>Remote</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Account</label>
+        <select class="form-select" id="bulk-account"></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Result</label>
+        <select class="form-select" id="bulk-result">
+          <option>Win</option><option>Loss</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Caught</label>
+        <select class="form-select" id="bulk-caught">
+          <option value="yes">Yes</option><option value="no">No</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input class="form-input" type="date" id="bulk-date">
+      </div>
+    </div>
+
+    <!-- Quantity rows -->
+    <div style="margin:14px 0 8px;font-size:12px;font-weight:600;color:var(--text2);">How many raids?</div>
+    <div id="bulk-qty-rows"></div>
+    <button class="btn sm" onclick="addBulkDateRow()" style="margin-top:6px;">+ Add another date</button>
+
+    <div style="margin-top:14px;padding:10px 12px;background:var(--bg3);border-radius:var(--radius);font-size:12px;color:var(--text3);" id="bulk-preview"></div>
+
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-raid-bulk')">Cancel</button>
+      <button class="btn primary" onclick="saveBulkRaids()">Log all raids</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-raid">
   <div class="modal">
     <div class="modal-title" id="raid-modal-title">Log raid</div>
@@ -2381,6 +2456,102 @@ function setSpendAcct(a) { spendAcct = a; renderSpending(); }
 // ===================== EVENTS / RAIDS RENDER =====================
 // ===================== RAIDS =====================
 const TIER_COLORS = { '1★':'teal','3★':'blue','5★':'purple','Mega':'gold','Elite':'red' };
+
+// ===================== BULK RAID =====================
+function autoFillBulkSpecies(boss) {
+  if (!boss || boss.length < 3) return;
+  const el = document.getElementById('bulk-species');
+  if (!el) return;
+  if (!el.value || el.dataset.autoFilled === 'true') {
+    el.value = bossToSpecies(boss);
+    el.dataset.autoFilled = 'true';
+  }
+}
+
+let _bulkRowCount = 0;
+
+function addBulkDateRow(date = '', qty = 1) {
+  const id = ++_bulkRowCount;
+  const row = document.createElement('div');
+  row.className = 'bulk-qty-row';
+  row.id = `bulk-row-${id}`;
+  row.innerHTML = `
+    <input type="date" class="bulk-date-input" id="bulk-row-date-${id}" value="${date}" oninput="updateBulkPreview()">
+    <span style="font-size:12px;color:var(--text3);">×</span>
+    <input type="number" class="bulk-qty-input" id="bulk-row-qty-${id}" value="${qty}" min="1" max="200" oninput="updateBulkPreview()">
+    <span style="font-size:12px;color:var(--text3);">raids</span>
+    <button class="btn sm danger" onclick="document.getElementById('bulk-row-${id}').remove();updateBulkPreview()">✕</button>`;
+  document.getElementById('bulk-qty-rows').appendChild(row);
+  updateBulkPreview();
+}
+
+function getBulkRows() {
+  return [...document.querySelectorAll('.bulk-qty-row')]
+    .map(row => {
+      const id = row.id.replace('bulk-row-','');
+      const date = document.getElementById(`bulk-row-date-${id}`)?.value;
+      const qty  = parseInt(document.getElementById(`bulk-row-qty-${id}`)?.value) || 0;
+      return { date, qty };
+    }).filter(r => r.date && r.qty > 0);
+}
+
+function updateBulkPreview() {
+  const rows  = getBulkRows();
+  const total = rows.reduce((s,r) => s+r.qty, 0);
+  const boss  = document.getElementById('bulk-boss')?.value || '?';
+  const pass  = document.getElementById('bulk-pass')?.value || 'remote';
+  const { usdPerCoin } = getEffectiveRates();
+  const coinsPerPass = pass === 'remote' ? 175 : pass === 'premium' ? 100 : 0;
+  const costStr = coinsPerPass && usdPerCoin
+    ? ` · ~$${(total * coinsPerPass * usdPerCoin).toFixed(2)} total`
+    : '';
+  const el = document.getElementById('bulk-preview');
+  if (el) el.innerHTML = total > 0
+    ? `<span style="color:var(--text2);">Will create <b style="color:var(--text);">${total} ${boss}</b> raid entries${rows.length > 1 ? ' across ' + rows.length + ' dates' : ''}${costStr}</span>`
+    : `<span>Add at least one date and quantity above</span>`;
+}
+
+function saveBulkRaids() {
+  const boss    = document.getElementById('bulk-boss').value.trim();
+  const species = document.getElementById('bulk-species').value.trim() || bossToSpecies(boss);
+  const tier    = document.getElementById('bulk-tier').value;
+  const pass    = document.getElementById('bulk-pass').value;
+  const account = document.getElementById('bulk-account').value;
+  const result  = document.getElementById('bulk-result').value;
+  const caught  = document.getElementById('bulk-caught').value === 'yes';
+  const rows    = getBulkRows();
+  if (!boss)        { toast('Enter a boss name'); return; }
+  if (!rows.length) { toast('Add at least one date and quantity'); return; }
+  if (!DB.raids) DB.raids = [];
+  let total = 0;
+  rows.forEach(({ date, qty }) => {
+    for (let i = 0; i < qty; i++) {
+      DB.raids.push({ id: uid(), date, account, boss, species, tier,
+        passType: pass, result, caught, shiny: false, hundo: false, background: 'na', notes: '' });
+      total++;
+    }
+  });
+  saveDB();
+  closeModal('modal-raid-bulk');
+  renderRaids();
+  toast(`✓ ${total} ${boss} raids logged`);
+}
+
+function openBulkRaidModal() {
+  _bulkRowCount = 0;
+  document.getElementById('bulk-qty-rows').innerHTML = '';
+  document.getElementById('bulk-boss').value    = '';
+  document.getElementById('bulk-species').value = '';
+  document.getElementById('bulk-species').dataset.autoFilled = 'false';
+  document.getElementById('bulk-preview').innerHTML = 'Add at least one date and quantity above';
+  const acctEl = document.getElementById('bulk-account');
+  acctEl.innerHTML = DB.accounts.map(a => `<option value="${a}">${a}</option>`).join('');
+  const bossList = document.getElementById('bulk-boss-list');
+  if (bossList && !bossList.children.length)
+    bossList.innerHTML = buildBossList().map(b => `<option value="${b}">`).join('');
+  addBulkDateRow(new Date().toISOString().split('T')[0], 1);
+  document.getElementById('modal-raid-bulk').classList.add('open');
+}
 
 function autoFillSpecies(boss) {
   if (!boss || boss.length < 3) return; // don't fire on partial input
@@ -4770,7 +4941,7 @@ function svgHBar(items, opts = {}) {
 // SVG line chart from [{date, value}] array
 function svgLine(points, opts = {}) {
   if (points.length < 2) return `<div class="an-empty">Need at least 2 data points</div>`;
-  const W = 480, H = 140, PL = 52, PR = 12, PT = 12, PB = 28;
+  const W = 560, H = 160, PL = 72, PR = 16, PT = 20, PB = 24;
   const cW = W - PL - PR, cH = H - PT - PB;
   const vals  = points.map(p => p.value);
   const minV  = Math.min(...vals);
@@ -4779,52 +4950,66 @@ function svgLine(points, opts = {}) {
   const fmt   = opts.fmt   || (v => v.toLocaleString());
   const useLog = opts.log && minV > 0;
 
-  // Scale functions — linear or log
-  const toScale   = v => useLog ? Math.log10(v) : v;
-  const minS      = toScale(minV);
-  const maxS      = toScale(maxV);
-  const rangeS    = maxS - minS || 1;
+  const toScale = v => useLog ? Math.log10(v) : v;
+  const minS    = toScale(minV);
+  const maxS    = toScale(maxV);
+  const rangeS  = maxS - minS || 1;
 
   const x = i => PL + (i / (points.length - 1)) * cW;
   const y = v => PT + cH - ((toScale(v) - minS) / rangeS) * cH;
 
-  // Path
   const pathD = points.map((p,i) => `${i===0?'M':'L'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
-  // Area fill
   const areaD = pathD + ` L${x(points.length-1).toFixed(1)},${(PT+cH).toFixed(1)} L${PL},${(PT+cH).toFixed(1)} Z`;
 
-  // Y axis labels (3 ticks) — on log scale use meaningful powers of 10
+  // Y axis ticks
   const yTickVals = useLog ? (() => {
     const lo = Math.floor(minS), hi = Math.ceil(maxS);
     const ticks = [];
     for (let p = lo; p <= hi; p++) ticks.push(Math.pow(10, p));
-    // If too many, pick just 3
-    if (ticks.length > 4) return [ticks[0], ticks[Math.floor(ticks.length/2)], ticks[ticks.length-1]];
+    if (ticks.length > 4) {
+      // Pick evenly spaced subset of max 4
+      const step = Math.ceil(ticks.length / 4);
+      return ticks.filter((_,i) => i % step === 0 || i === ticks.length-1);
+    }
     return ticks;
   })() : [minV, minV + (maxV-minV)/2, maxV];
 
+  // Short format for Y labels
+  const fmtY = v => {
+    if (v >= 1000000) return (v/1000000).toFixed(v%1000000===0?0:1)+'M';
+    if (v >= 1000)    return (v/1000).toFixed(v%1000===0?0:0)+'K';
+    return v.toLocaleString();
+  };
+
   const yTicks = yTickVals.map(v => {
     const yy = y(v).toFixed(1);
-    return `<text x="${PL-6}" y="${parseFloat(yy)+4}" text-anchor="end" font-size="10" fill="var(--text3)">${fmt(v)}</text>
-            <line x1="${PL}" y1="${yy}" x2="${W-PR}" y2="${yy}" stroke="var(--border)" stroke-width="1"/>`;
+    return `<text x="${PL-8}" y="${Math.min(parseFloat(yy)+4, PT+cH+4)}" text-anchor="end" font-size="10" fill="var(--text3)">${fmtY(v)}</text>
+            <line x1="${PL}" y1="${yy}" x2="${W-PR}" y2="${yy}" stroke="var(--border)" stroke-width="0.5" opacity="0.6"/>`;
   }).join('');
 
-  // X axis labels — first, middle, last
-  const xIdxs = [0, Math.floor((points.length-1)/2), points.length-1];
+  // X axis labels — first, middle, last — kept inside chart width
+  const xIdxs = points.length <= 3
+    ? points.map((_,i)=>i)
+    : [0, Math.floor((points.length-1)/2), points.length-1];
   const xLabels = xIdxs.map(i => {
-    const lbl = points[i].date.slice(5);
-    return `<text x="${x(i).toFixed(1)}" y="${H-4}" text-anchor="middle" font-size="10" fill="var(--text3)">${lbl}</text>`;
+    const xPos = x(i);
+    const anchor = i === 0 ? 'start' : i === points.length-1 ? 'end' : 'middle';
+    const clampedX = i === 0 ? Math.max(xPos, PL) : i === points.length-1 ? Math.min(xPos, W-PR) : xPos;
+    return `<text x="${clampedX.toFixed(1)}" y="${H-4}" text-anchor="${anchor}" font-size="10" fill="var(--text3)">${points[i].date.slice(5)}</text>`;
   }).join('');
 
-  // Dot and label at last point
-  const lastX = x(points.length-1), lastY = y(points[points.length-1].value);
+  // Last point label — clamp to stay inside
+  const lastX   = x(points.length-1);
+  const lastY   = y(points[points.length-1].value);
   const lastLbl = fmt(points[points.length-1].value);
-  const logNote = useLog ? `<text x="${PL}" y="${PT+8}" font-size="9" fill="var(--text3)" opacity="0.6">log scale</text>` : '';
+  const lblX    = Math.min(lastX, W - PR - 20);
+  const lblY    = Math.max(lastY - 8, PT + 10);
+  const logNote = useLog ? `<text x="${PL+4}" y="${PT+10}" font-size="9" fill="var(--text3)" opacity="0.5">log scale</text>` : '';
 
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">
     <defs>
       <linearGradient id="ag${opts.gid||0}" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="${color}" stop-opacity="0.25"/>
+        <stop offset="0%" stop-color="${color}" stop-opacity="0.2"/>
         <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
       </linearGradient>
     </defs>
@@ -4833,7 +5018,7 @@ function svgLine(points, opts = {}) {
     <path d="${areaD}" fill="url(#ag${opts.gid||0})"/>
     <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>
     <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="4" fill="${color}"/>
-    <text x="${lastX.toFixed(1)}" y="${(lastY-8).toFixed(1)}" text-anchor="middle" font-size="10" fill="${color}" font-weight="600">${lastLbl}</text>
+    <text x="${lblX.toFixed(1)}" y="${lblY.toFixed(1)}" text-anchor="end" font-size="10" fill="${color}" font-weight="600">${lastLbl}</text>
     ${xLabels}
   </svg>`;
 }
