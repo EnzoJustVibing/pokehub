@@ -115,8 +115,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .poke-img { width: 52px; height: 52px; image-rendering: pixelated; }
 .poke-num { font-size: 10px; color: var(--text3); }
 .poke-name { font-size: 10px; color: var(--text2); text-align: center; line-height: 1.2; }
-.poke-dots { display: flex; gap: 3px; justify-content: center; margin-top: 1px; flex-wrap: wrap; }
-.poke-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--bg4); border: 1px solid var(--border2); flex-shrink: 0; }
+.poke-dots { display: flex; gap: 5px; justify-content: center; margin-top: 3px; flex-wrap: wrap; }
+.poke-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--bg4); border: 1px solid var(--border2); flex-shrink: 0; cursor: pointer; transition: transform 0.1s; }
+.poke-dot:hover { transform: scale(1.4); border-color: var(--text2); }
 .poke-dot.on { border-color: transparent; }
 .poke-dot.blue { background: var(--blue); }
 .poke-dot.gold { background: var(--gold); }
@@ -421,10 +422,27 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 <!-- ===================== HOME / DASHBOARD PAGE ===================== -->
 <div class="page active" id="page-home">
   <div id="home-main"></div>
+
+  <!-- Manual event-page parser — fallback for anything the automatic feed above can't see
+       (Increased Shiny Chance windows, generic Wild Area / Catch Mastery spawn lists). -->
+  <div class="card" style="margin-bottom:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--text2);">📋 Paste an event page for more</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">Covers things the automatic feed above can't see — Increased Shiny Chance windows, Wild Area/Catch Mastery spawns, etc. Paste a full LeekDuck event page (Ctrl+A, Ctrl+C on the page, paste here).</div>
+      </div>
+      <button class="btn sm" onclick="openSpawnParser()" style="flex-shrink:0;">+ Parse event</button>
+    </div>
+    <div id="spawn-paste-wrap" style="display:none;">
+      <textarea id="spawn-paste-area" placeholder="Paste LeekDuck event page content here..." style="width:100%;height:120px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;color:var(--text);font-size:12px;resize:vertical;font-family:inherit;" oninput="parseSpawnPage(this.value)"></textarea>
+    </div>
+    <div id="spawn-results"></div>
+  </div>
 </div>
 
 <!-- ===================== DEX PAGE ===================== -->
 <div class="page" id="page-dex">
+  <div class="card" id="kanto-lucky-goal" style="margin-bottom:14px;display:none;"></div>
   <div class="stats-grid" id="dex-stats"></div>
   <div class="dex-tabs" id="dex-tabs"></div>
   <div class="gen-row" id="gen-row"></div>
@@ -434,6 +452,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <button class="filter-pill" id="fp-have" onclick="setDexFilter('have',this)">Have</button>
     <button class="filter-pill" id="fp-missing" onclick="setDexFilter('missing',this)">Missing</button>
     <button class="filter-pill" id="fp-needshiny" onclick="setDexFilter('needshiny',this)">Need shiny</button>
+    <button class="filter-pill" id="fp-needlucky" onclick="setDexFilter('needlucky',this)">Need lucky</button>
   </div>
   <div class="bulk-bar">
     <span class="bulk-label" id="bulk-label">Bulk:</span>
@@ -608,20 +627,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
       <button class="btn sm" onclick="loadRaidAdvisor(true)" style="flex-shrink:0;">↻ Refresh</button>
     </div>
     <div id="raid-advisor-atk"></div>
-  </div>
-  <!-- Spawn Advisor Panel -->
-  <div class="card" style="margin-bottom:14px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-      <div>
-        <div style="font-size:12px;font-weight:700;color:var(--text2);">🌿 Wild spawn candy opportunities</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:2px;">Paste a LeekDuck event page (Ctrl+A, Ctrl+C on the page, paste here)</div>
-      </div>
-      <button class="btn sm" onclick="openSpawnParser()">+ Parse event</button>
-    </div>
-    <div id="spawn-paste-wrap" style="display:none;">
-      <textarea id="spawn-paste-area" placeholder="Paste LeekDuck event page content here..." style="width:100%;height:120px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;color:var(--text);font-size:12px;resize:vertical;font-family:inherit;" oninput="parseSpawnPage(this.value)"></textarea>
-    </div>
-    <div id="spawn-results"></div>
   </div>
   <!-- Controls -->
   <div class="controls-row" style="margin-bottom:10px;flex-wrap:wrap;gap:8px;">
@@ -959,6 +964,22 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <div class="add-attr-row" style="margin-top:10px;">
       <input type="text" id="new-account-name" placeholder="Account name...">
       <button class="btn primary" onclick="addAccount()">Add</button>
+    </div>
+  </div>
+
+  <div class="manage-section">
+    <div class="manage-title">Preferences</div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <label style="font-size:13px;color:var(--text);font-weight:500;">Event page timezone:</label>
+      <select id="event-timezone-select" class="form-select" style="width:220px;" onchange="setEventTimeZone(this.value)">
+        <option value="America/New_York">Eastern (default — Niantic's own anchor)</option>
+        <option value="America/Chicago">Central</option>
+        <option value="America/Denver">Mountain</option>
+        <option value="America/Los_Angeles">Pacific</option>
+        <option value="UTC">UTC</option>
+        <option value="local">Browser's local time</option>
+      </select>
+      <span style="font-size:11px;color:var(--text3);">Used to figure out if a pasted event's time window (e.g. Increased Shiny Chance) has already passed.</span>
     </div>
   </div>
 
@@ -1574,6 +1595,7 @@ let DB = {
   journal: [],              // [{ id, date, type, text, pokemon, emoji, notes }] — manual entries
   medalProgress: {},        // { medalKey: { value, logToJournal, earned: { bronze, silver, gold, platinum } } }
   attackers: {},            // { speciesKey: [{ id, cp, level, ivAtk, ivDef, ivHp, shadow, purified, fastMove, chargedMove, eliteFast, eliteCharged, notes }] }
+  eventTimeZone: 'America/New_York', // timezone used to interpret pasted event page times (Pokémon GO event times are usually shown in local, but LeekDuck's page text is Eastern-anchored unless the visitor's browser was set elsewhere)
 };
 
 function saveDB() {
@@ -1960,8 +1982,76 @@ function getDexRoster() {
     if (caughtIdx >= 0 && shinyIdx >= 0) {
       list = list.filter(p => getAttrVal(p, caughtIdx) && !getAttrVal(p, shinyIdx));
     }
+  } else if (dexFilter === 'needlucky') {
+    const luckyIdx = attrs.findIndex(a => a.name.toLowerCase().includes('lucky'));
+    if (luckyIdx >= 0) {
+      list = list.filter(p => !getAttrVal(p, luckyIdx));
+    }
   }
   return list;
+}
+
+// ===================== LIVING DEX GOALS =====================
+// Tracks progress toward a "living" completion goal — every Pokémon in a
+// given id range with a given bool attribute set. Currently just Kanto/Lucky,
+// but written generically so more goals (e.g. Living Shiny Johto) are a
+// one-line addition to LIVING_GOALS.
+const LIVING_GOALS = [
+  { key: 'kanto_lucky', emoji: '🍀', label: 'Living Lucky Kanto Dex', sub: 'All 151 Kanto Pokémon as Lucky',
+    dex: 'standard', idStart: 1, idEnd: 151, attrMatch: 'lucky', color: 'var(--green)', gradient: 'linear-gradient(90deg,var(--green),var(--teal))' },
+];
+
+function getLivingGoalProgress(goal) {
+  const roster = buildRoster(goal.dex).filter(p => typeof p.id === 'number' && p.id >= goal.idStart && p.id <= goal.idEnd);
+  const attrs = DB.attrs[goal.dex] || [];
+  const attrIdx = attrs.findIndex(a => a.name.toLowerCase().includes(goal.attrMatch));
+  const caughtIdx = attrs.findIndex(a => a.name.toLowerCase().includes('caught'));
+  if (attrIdx < 0) return null;
+  const total = roster.length;
+  const done = roster.filter(p => getAttrVal(p, attrIdx)).length;
+  const caughtNotDone = caughtIdx >= 0 ? roster.filter(p => getAttrVal(p, caughtIdx) && !getAttrVal(p, attrIdx)).length : 0;
+  return { total, done, caughtNotDone, pct: total > 0 ? Math.round((done / total) * 100) : 0 };
+}
+
+function renderLivingGoalCard(goal, elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const prog = getLivingGoalProgress(goal);
+  if (!prog) { el.style.display = 'none'; return; }
+  el.style.display = '';
+  el.style.cursor = 'pointer';
+  el.onclick = () => jumpToLivingGoal(goal.key);
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);">${goal.emoji} ${goal.label}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">${goal.sub}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:20px;font-weight:700;color:${goal.color};">${prog.done}<span style="font-size:13px;color:var(--text3);"> / ${prog.total}</span></div>
+        ${prog.caughtNotDone ? `<div style="font-size:11px;color:var(--gold);">${prog.caughtNotDone} caught, not there yet</div>` : ''}
+      </div>
+    </div>
+    <div class="xp-bar-wrap"><div class="xp-bar-fill" style="width:${prog.pct}%;background:${goal.gradient};"></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+      <div style="font-size:11px;color:var(--text3);">${prog.pct}% complete${prog.done===prog.total ? ' — 🎉 Done!' : ''}</div>
+      <button class="btn sm" onclick="event.stopPropagation();jumpToLivingGoal('${goal.key}')">Show missing</button>
+    </div>
+  `;
+}
+
+function jumpToLivingGoal(key) {
+  const goal = LIVING_GOALS.find(g => g.key === key);
+  if (!goal) return;
+  showPage('dex');
+  switchDexView(goal.dex);
+  if (goal.dex === 'standard') {
+    const genIdx = GENS.findIndex(g => g.start === goal.idStart);
+    if (genIdx >= 0) setDexGen(genIdx + 1);
+  }
+  const filterKey = 'need' + goal.attrMatch;
+  const btn = document.getElementById('fp-' + filterKey);
+  if (btn) setDexFilter(filterKey, btn);
 }
 
 
@@ -2093,7 +2183,8 @@ function renderDex() {
   const boolAttrList = curAttrs.map((a,i) => ({...a, i})).filter(a => a.type === 'bool');
 
   document.getElementById('poke-grid').innerHTML = paged.map(p => {
-    const vals = boolAttrList.map(a => ({ color: ATTR_COLORS[a.color], on: !!getAttrVal(p, a.i) }));
+    const key = getDexKey(p);
+    const vals = boolAttrList.map(a => ({ name: a.name, idx: a.i, color: ATTR_COLORS[a.color], on: !!getAttrVal(p, a.i) }));
     const allOn = vals.length > 0 && vals.every(v => v.on);
     let cardCls = '';
     if (allOn && vals.length > 1) cardCls = 'state-3';
@@ -2103,8 +2194,9 @@ function renderDex() {
 
     const imgSrc = getBaseSprite(p);
     const numLabel = typeof p.id === 'number' ? `#${String(p.id).padStart(3,'0')}` : '';
-    const dots = vals.map(v => `<div class="poke-dot ${v.on ? 'on '+v.color : ''}"></div>`).join('');
-    return `<div class="poke-card ${cardCls}" onclick="clickPoke(${JSON.stringify(getDexKey(p)).replace(/"/g,"'")})" title="${p.name}">
+    const keyJs = JSON.stringify(key).replace(/"/g,"'");
+    const dots = vals.map(v => `<div class="poke-dot ${v.on ? 'on '+v.color : ''}" title="${v.name}" onclick="toggleDotAttr(${keyJs}, ${v.idx}, event)"></div>`).join('');
+    return `<div class="poke-card ${cardCls}" onclick="clickPoke(${keyJs})" title="Tap: toggle ${vals[0]?.name || 'primary'} · Tap a dot: toggle that trait">
       <img class="poke-img" src="${imgSrc}" loading="lazy" alt="${p.name}">
       <div class="poke-num">${numLabel}</div>
       <div class="poke-name">${p.name}</div>
@@ -2115,21 +2207,45 @@ function renderDex() {
   document.getElementById('page-info').textContent = `Page ${dexPage+1}/${Math.max(1,totalPages)} — ${roster.length} shown`;
   document.getElementById('prev-btn').disabled = dexPage === 0;
   document.getElementById('next-btn').disabled = dexPage >= totalPages - 1;
+
+  // Living dex goals (currently: Living Lucky Kanto)
+  LIVING_GOALS.filter(g => g.dex === dexView).forEach(g => renderLivingGoalCard(g, 'kanto-lucky-goal'));
+  if (!LIVING_GOALS.some(g => g.dex === dexView)) {
+    const goalEl = document.getElementById('kanto-lucky-goal');
+    if (goalEl) goalEl.style.display = 'none';
+  }
 }
 
+// Clicking the card body toggles the primary trait (usually "Caught").
+// Turning it off clears every other trait too — you can't be Shiny/Lucky
+// without being Caught, so this keeps state from going stale.
+// Each individual dot (see toggleDotAttr) toggles just that one trait in a single tap —
+// no more cycling through every combination to reach the one you want.
 function clickPoke(key) {
-  // Cycle first bool attr, then next, etc.
   const attrs = DB.attrs[dexView] || [];
   const bools = attrs.map((a,i)=>({...a,i})).filter(a=>a.type==='bool');
   if (!bools.length) return;
+  const primary = bools[0];
   if (!DB.dexData[key]) DB.dexData[key] = {};
   const d = DB.dexData[key];
-  const allOn = bools.every(a => d[a.i]);
-  if (allOn) { bools.forEach(a => { d[a.i] = false; }); }
-  else {
-    const next = bools.find(a => !d[a.i]);
-    if (next) d[next.i] = true;
-  }
+  const turningOn = !d[primary.i];
+  d[primary.i] = turningOn;
+  if (!turningOn) bools.slice(1).forEach(a => { d[a.i] = false; });
+  saveDB(); renderDex();
+}
+
+// Toggle one specific trait directly (from clicking its dot). Turning on a
+// secondary trait (e.g. Shiny) implies the primary one (Caught) too.
+function toggleDotAttr(key, attrIdx, event) {
+  if (event) event.stopPropagation();
+  const attrs = DB.attrs[dexView] || [];
+  const bools = attrs.map((a,i)=>({...a,i})).filter(a=>a.type==='bool');
+  const primary = bools[0];
+  if (!DB.dexData[key]) DB.dexData[key] = {};
+  const d = DB.dexData[key];
+  const turningOn = !d[attrIdx];
+  if (turningOn && primary && attrIdx !== primary.i) d[primary.i] = true;
+  d[attrIdx] = turningOn;
   saveDB(); renderDex();
 }
 
@@ -2944,9 +3060,16 @@ function renderManage() {
   document.getElementById('trainer-start-caught').value = ts.caught || '';
   document.getElementById('trainer-start-stops').value  = ts.stops  || '';
   document.getElementById('trainer-start-km').value     = ts.km     || '';
+  document.getElementById('event-timezone-select').value = DB.eventTimeZone || 'America/New_York';
   // Sync config
   renderSyncConfig();
   renderBackups();
+}
+
+function setEventTimeZone(val) {
+  DB.eventTimeZone = val;
+  saveDB();
+  toast('Event timezone set — re-parse any pasted event page to apply');
 }
 
 function setManageAttrDex(v) { manageAttrDex = v; renderManage(); }
@@ -3588,6 +3711,238 @@ async function loadRaidAdvisor(force = false) {
   els.forEach(el => renderAdvisorCards(bosses, el));
 }
 
+// ===================== EVENT CATCH ADVISOR =====================
+// Flags live/upcoming events that feature a Pokémon you're actually after —
+// missing from your dex entirely, or (for Kanto) caught but not Lucky yet —
+// so you know when it's worth running your alt account to farm fresh catches
+// to trade up to your main. Pulls structured event data directly instead of
+// relying on manually pasting a page (which is fragile — see spawn parser).
+const SCRAPED_DUCK_EVENTS = 'https://raw.githubusercontent.com/bigfoott/ScrapedDuck/data/events.min.json';
+let _eventDataCache = null;
+let _eventDataLastFetch = 0;
+
+async function fetchUpcomingEvents(force = false) {
+  const now = Date.now();
+  if (!force && _eventDataCache && (now - _eventDataLastFetch) < RAID_CACHE_TTL) {
+    return _eventDataCache;
+  }
+  try {
+    const res = await fetch(SCRAPED_DUCK_EVENTS);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    _eventDataCache = Array.isArray(data) ? data : [];
+    _eventDataLastFetch = now;
+    return _eventDataCache;
+  } catch(e) {
+    console.warn('ScrapedDuck events fetch failed:', e.message);
+    return _eventDataCache || [];
+  }
+}
+
+let _knownPokeNamesCache = null;
+function getKnownPokeNames() {
+  if (_knownPokeNamesCache) return _knownPokeNamesCache;
+  _knownPokeNamesCache = new Set(Object.values(POKE_NAMES));
+  return _knownPokeNamesCache;
+}
+
+// Pull candidate Pokémon names out of a ScrapedDuck event, two ways at once:
+// 1) match known species names as whole words against the event's own title
+//    (robust to any future schema changes — titles reliably name the Pokémon,
+//    e.g. "Sprigatito Community Day", "Larvitar Spotlight Hour")
+// 2) deep-scan extraData for any {name: "..."} entries that happen to match a
+//    known species (covers spawn/bonus lists when the schema does include them)
+function extractEventPokemonNames(ev) {
+  const known = getKnownPokeNames();
+  const found = new Set();
+  const title = [ev.name, ev.heading].filter(Boolean).join(' ');
+  known.forEach(name => {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`(^|[^A-Za-z])${escaped}([^A-Za-z]|$)`, 'i');
+    if (re.test(title)) found.add(name);
+  });
+  const seen = new Set();
+  (function walk(node) {
+    if (!node || typeof node !== 'object' || seen.has(node)) return;
+    seen.add(node);
+    if (Array.isArray(node)) { node.forEach(walk); return; }
+    if (typeof node.name === 'string' && known.has(node.name)) found.add(node.name);
+    Object.values(node).forEach(walk);
+  })(ev.extraData);
+  return [...found];
+}
+
+// Reverse-index of ATK_CANDY_FROM: species name -> the attacker "families"
+// (candy-chain + tracked attacker) it belongs to. Reuses the same data the
+// Attackers page's Spawn Advisor uses, so a Houndour spawn already knows it
+// feeds Shadow Houndoom, etc. Built once, lazily (ATK_CANDY_FROM/ATTACKERS
+// are defined later in the file but this is only ever called after the
+// whole script — and thus those consts — have loaded).
+let _familyByName = null;
+function getFamilyLookup() {
+  if (_familyByName) return _familyByName;
+  _familyByName = {};
+  Object.entries(ATK_CANDY_FROM).forEach(([atkKey, chain]) => {
+    chain.forEach(name => {
+      if (!_familyByName[name]) _familyByName[name] = [];
+      _familyByName[name].push({ atkKey, chain });
+    });
+  });
+  return _familyByName;
+}
+
+// Does this event make `name` shiny-available, and is that boosted?
+// Community Day always boosts shiny odds for its featured spawn. Spotlight
+// Hour doesn't boost odds, but each listed Pokémon does carry a canBeShiny
+// flag. Other event types (Catch Mastery, Wild Area, etc.) don't expose
+// shiny info in the feed, so we stay silent rather than guess.
+function getEventShinyInfo(ev, name) {
+  if (ev.eventType === 'community-day') return { available: true, boosted: true };
+  const spotlight = ev.extraData?.spotlight;
+  if (spotlight) {
+    const entry = (spotlight.list || []).find(x => x.name === name) || (spotlight.name === name ? spotlight : null);
+    if (entry) return { available: !!entry.canBeShiny, boosted: false };
+  }
+  return null;
+}
+
+// Every concrete reason this wild spawn is worth catching on the alt:
+// - not in your dex at all
+// - a Kanto species you still need Lucky for (your trade-up goal)
+// - shiny available this event (boosted for CD) and you're missing it —
+//   for itself, or for something else in its family whose shiny you'd get
+//   for free by evolving a shiny catch
+// - it (or something in its candy chain) is a tracked attacker that still
+//   needs regular or XL candy
+function getCatchReasons(name, ev) {
+  const roster = buildRoster('standard');
+  const p = roster.find(r => r.name === name);
+  if (!p) return null;
+  const attrs = DB.attrs['standard'] || [];
+  const caughtIdx = attrs.findIndex(a => a.name.toLowerCase().includes('caught'));
+  const shinyIdx  = attrs.findIndex(a => a.name.toLowerCase().includes('shiny'));
+  const luckyIdx  = attrs.findIndex(a => a.name.toLowerCase().includes('lucky'));
+  const caught = caughtIdx >= 0 ? !!getAttrVal(p, caughtIdx) : false;
+  const shiny  = shinyIdx  >= 0 ? !!getAttrVal(p, shinyIdx)  : false;
+  const lucky  = luckyIdx  >= 0 ? !!getAttrVal(p, luckyIdx)  : false;
+  const isKanto = typeof p.id === 'number' && p.id >= 1 && p.id <= 151;
+  const reasons = [];
+
+  if (!caught) reasons.push({ tag: 'missing', label: 'Missing from dex' });
+  if (isKanto && !lucky) reasons.push({ tag: 'lucky', label: caught ? 'Need Lucky' : 'Need Lucky once caught' });
+
+  const shinyInfo = getEventShinyInfo(ev, name);
+  if (shinyInfo?.available && !shiny) {
+    reasons.push({ tag: 'shiny', label: shinyInfo.boosted ? 'Shiny odds boosted' : 'Shiny possible' });
+  }
+
+  const families = getFamilyLookup()[name] || [];
+  if (shinyInfo?.available) {
+    const evoShinyMissing = new Set();
+    families.forEach(({ chain }) => chain.forEach(fname => {
+      if (fname === name || fname === p.name) return;
+      const fp = roster.find(r => r.name === fname);
+      if (fp && shinyIdx >= 0 && !getAttrVal(fp, shinyIdx)) evoShinyMissing.add(fname);
+    }));
+    if (evoShinyMissing.size) {
+      reasons.push({ tag: 'shiny', label: `Evolve for shiny ${[...evoShinyMissing].join('/')}` });
+    }
+  }
+
+  const candySeen = new Set();
+  families.forEach(({ atkKey }) => {
+    if (candySeen.has(atkKey)) return;
+    candySeen.add(atkKey);
+    const atk = ATTACKERS.find(a => a.key === atkKey);
+    if (!atk) return;
+    const copies = (DB.attackers || {})[atkKey] || [];
+    const { priority, maxLevel } = getAdvisorPriority(atk, copies);
+    if (priority === 'candy') reasons.push({ tag: 'candy', label: `Candy for ${atk.name} (Lvl ${maxLevel || 0})` });
+    if (priority === 'xl')    reasons.push({ tag: 'xl',    label: `XL Candy for ${atk.name} (Lvl ${maxLevel})` });
+  });
+
+  return reasons.length ? { pokemon: p, reasons } : null;
+}
+
+async function getEventCatchAlerts(force = false) {
+  const events = await fetchUpcomingEvents(force);
+  const now = Date.now();
+  const results = [];
+  events.forEach(ev => {
+    const endTime = ev.end ? new Date(ev.end).getTime() : null;
+    if (endTime && endTime < now) return; // skip events already over
+    // Only wild-catchable events — this is what ScrapedDuck itself flags as
+    // having wild spawns, so it cleanly excludes raids, GBL, and Max Battles
+    // (none of which help an alt-catch-and-trade workflow).
+    if (!ev.extraData?.generic?.hasSpawns) return;
+    const names = extractEventPokemonNames(ev);
+    const wanted = names.map(n => getCatchReasons(n, ev)).filter(Boolean);
+    if (wanted.length) results.push({ event: ev, wanted });
+  });
+  results.sort((a,b) => new Date(a.event.start || 0) - new Date(b.event.start || 0));
+  return results;
+}
+
+function fmtEventWindow(ev) {
+  const fmt = s => { try { return new Date(s).toLocaleDateString([], { month:'short', day:'numeric' }); } catch(e) { return ''; } };
+  const start = ev.start ? fmt(ev.start) : '';
+  const end = ev.end ? fmt(ev.end) : '';
+  if (start && end && start !== end) return `${start} – ${end}`;
+  return start || end || '';
+}
+
+const CATCH_REASON_META = {
+  missing: { color: 'blue',   icon: '🎯', priority: 'priority-catch'   },
+  lucky:   { color: 'gold',   icon: '🍀', priority: 'priority-upgrade' },
+  shiny:   { color: 'purple', icon: '✨', priority: 'priority-xl'      },
+  candy:   { color: 'green',  icon: '🍬', priority: 'priority-candy'   },
+  xl:      { color: 'green',  icon: '💎', priority: 'priority-xl'      },
+};
+const CATCH_REASON_ORDER = ['missing', 'lucky', 'shiny', 'xl', 'candy'];
+
+function renderEventCatchAlerts(alerts, targetEl) {
+  if (!alerts.length) {
+    targetEl.innerHTML = `<div class="advisor-empty">No upcoming wild-spawn events feature Pokémon you're after right now.</div>`;
+    return;
+  }
+  targetEl.innerHTML = alerts.map(({ event, wanted }) => {
+    // Pick the highest-priority reason tag present across every wanted species
+    // in this event to drive the card's color/icon/priority styling.
+    const tagsPresent = new Set(wanted.flatMap(w => w.reasons.map(r => r.tag)));
+    const topTag = CATCH_REASON_ORDER.find(t => tagsPresent.has(t)) || 'missing';
+    const meta = CATCH_REASON_META[topTag];
+    const window = fmtEventWindow(event);
+
+    // One-line summary of the distinct reasons in play (deduped, capped)
+    const summary = [...new Set(wanted.flatMap(w => w.reasons.map(r => r.label)))].slice(0, 3).join(' · ');
+
+    const pokeChips = wanted.map(w => {
+      const primaryTag = CATCH_REASON_ORDER.find(t => w.reasons.some(r => r.tag === t)) || w.reasons[0].tag;
+      const color = CATCH_REASON_META[primaryTag]?.color || 'blue';
+      const tip = w.reasons.map(r => r.label).join(' · ');
+      return `<span class="badge ${color}" style="font-size:10px;" title="${tip}">${w.pokemon.name}</span>`;
+    }).join(' ');
+
+    return `<div class="advisor-card ${meta.priority}">
+      <div class="advisor-icon">${meta.icon}</div>
+      <div class="advisor-body">
+        <div class="advisor-title">${event.name || 'Event'}${window ? ` <span style="font-size:10px;opacity:0.7;">${window}</span>` : ''}</div>
+        <div class="advisor-sub">${summary}</div>
+        <div class="advisor-tags">${pokeChips}</div>
+      </div>
+    </div>`;
+  }).join('') +
+    `<div style="font-size:10px;color:var(--text3);text-align:right;margin-top:6px;">Data: <a href="https://leekduck.com/events/" target="_blank" style="color:var(--text3);">LeekDuck</a> via <a href="https://github.com/bigfoott/ScrapedDuck" target="_blank" style="color:var(--text3);">ScrapedDuck</a></div>`;
+}
+
+async function loadEventCatchAdvisor(force = false) {
+  const el = document.getElementById('event-catch-advisor');
+  if (!el) return;
+  el.innerHTML = `<div class="advisor-loading">⟳ Checking upcoming events for Pokémon you need…</div>`;
+  const alerts = await getEventCatchAlerts(force);
+  renderEventCatchAlerts(alerts, el);
+}
+
 
 // ===================== SPAWN ADVISOR =====================
 
@@ -3686,135 +4041,192 @@ const ATK_CANDY_FROM = {
   shadow_porygon_z:['Porygon','Porygon2','Porygon-Z'],mega_lopunny:['Buneary','Lopunny'],
 };
 
-function parseLeekDuckText(text) {
-  if (!text || text.length < 100) return null;
-
-  // Event name — first substantial line that looks like a title
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  let eventName = 'Event';
-  for (const l of lines) {
-    if (l.length > 3 && l.length < 60
-      && !/^(leek duck|shiny|raids|current raid|raid now|research|eggs|events|menu|resources|pen pal|promo)/i.test(l)
-      && !/^\d/.test(l)
-      && !/^(starts|ends|features|spawns|graphic)$/i.test(l)) {
-      eventName = l; break;
-    }
-  }
-
-  // End date
-  const endPatterns = [
-    /Ends:\s*\n?\s*([^\n]{5,80}(?:Local Time|PM|AM))/i,
-    /to\s+([A-Za-z]+day,\s+[A-Za-z]+ \d+,\s+\d{4}[^\n]*(?:Local Time|PM|AM)[^\n]*)/i,
-  ];
-  let endStr = null;
-  for (const pat of endPatterns) { const m = text.match(pat); if (m) { endStr = m[1].trim(); break; } }
-
-  // Find spawns section — look for "Wild Encounters" or "Spawns" header
-  const lower = text.toLowerCase();
-  const sectionMarkers = ['wild encounters', 'spawns\n', 'wild pokémon', 'spawnsSpawns'];
-  let sectionStart = -1;
-  for (const marker of sectionMarkers) {
-    const idx = lower.indexOf(marker.toLowerCase());
-    if (idx !== -1 && (sectionStart === -1 || idx < sectionStart)) sectionStart = idx;
-  }
-  if (sectionStart === -1) return { eventName, endStr, spawns: [] };
-
-  // End section at Raids/Research/GO Pass etc.
-  const sectionEndMarkers = ['raids\n', 'research\n', 'field research', 'go pass', 'sales\n', 'graphic\n', 'raidsRaids', 'researchResearch'];
-  const sectionEndCandidates = sectionEndMarkers
-    .map(s => lower.indexOf(s.toLowerCase(), sectionStart + 20))
-    .filter(i => i !== -1);
-  const sectionEnd = sectionEndCandidates.length ? Math.min(...sectionEndCandidates) : sectionStart + 3000;
-  const spawnSection = text.slice(sectionStart, sectionEnd);
-
-  // SKIP words — noise in the spawn section
-  const SKIP = new Set(['shiny','shinyShiny','spawns','wild encounters','wild pokémon',
-    'you may encounter','note:','appearing','hemisphere','might even encounter',
-    'event-themed','event themed']);
-
-  const spawnNames = new Set();
-  const spawnLines = spawnSection.split('\n').map(l => l.trim()).filter(Boolean);
-
-  for (const line of spawnLines) {
-    // Skip noise
-    if (SKIP.has(line.toLowerCase())) continue;
-    if (/^(you |note:|appearing|#|\*|-\s*$|spawns|wild|event)/i.test(line)) continue;
-    // Skip very long lines (sentences) or very short ones
-    if (line.length < 3 || line.length > 50) continue;
-    // Skip lines starting with lowercase (sentences mid-paragraph)
-    if (/^[a-z]/.test(line)) continue;
-    // Must start with uppercase letter — actual Pokémon name
-    if (/^[A-Z]/.test(line)) {
-      const base = line.replace(/\s*\([^)]*\)\s*$/, '').trim(); // strip forme
-      if (base.length > 1) spawnNames.add(base);
-      spawnNames.add(line); // also add with forme for matching
-    }
-  }
-
-  // Also catch dash-list items: "- Pidgey"
-  (spawnSection.match(/^[-•]\s+([A-Z][a-zA-Zéèê'\-\. ]{1,35})$/gm) || []).forEach(m => {
-    const name = m.replace(/^[-•]\s+/, '').replace(/\s*\(.*\)/, '').trim();
-    if (name.length > 1) spawnNames.add(name);
-  });
-
-  return { eventName, endStr, spawns: [...spawnNames] };
-}
-
 function openSpawnParser() {
   document.getElementById('spawn-paste-area').value = '';
   document.getElementById('spawn-results').innerHTML = '';
   document.getElementById('spawn-paste-wrap').style.display = 'block';
 }
 
+// ---- Timezone-aware parsing of pasted event page date/time text ----
+// LeekDuck's page text (and Niantic's event copy generally) doesn't include
+// a UTC offset — "September 8 at 10:00 a.m. local time" is meaningless
+// without knowing which timezone it was rendered in. Default is Eastern
+// (configurable in Manage) since that's Niantic's own scheduling anchor;
+// pick "Browser local time" there instead if you copy pages with your
+// device set to your own zone.
+const MONTH_NAMES = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+
+// Standard trick for getting a named timezone's UTC offset at a given instant:
+// format that instant's wall-clock time in the target zone, then see what UTC
+// timestamp would produce those same numbers — the gap is the offset.
+function getTZOffsetMinutes(date, timeZone) {
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone, hourCycle: 'h23',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
+  const parts = dtf.formatToParts(date).reduce((acc,p) => { if (p.type !== 'literal') acc[p.type] = parseInt(p.value); return acc; }, {});
+  const asUTC = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
+  return (asUTC - date.getTime()) / 60000;
+}
+
+function zonedTimeToUtc(year, monthIdx, day, hour, minute, timeZone) {
+  if (timeZone === 'local') return new Date(year, monthIdx, day, hour, minute);
+  const guess = new Date(Date.UTC(year, monthIdx, day, hour, minute));
+  const offsetMin = getTZOffsetMinutes(guess, timeZone);
+  return new Date(guess.getTime() - offsetMin * 60000);
+}
+
+// Parses a loose "September 8 at 10:00 a.m." style fragment (no year given —
+// events are near-term, so we pick whichever of this year / next year lands
+// closest to now) into a real Date, in the configured event timezone.
+function parseLooseDateTime(str) {
+  const m = str.match(/([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?(?:,\s*(\d{4}))?\s+at\s+(\d{1,2}):(\d{2})\s*(a\.?m\.?|p\.?m\.?)/i);
+  if (!m) return null;
+  const monthIdx = MONTH_NAMES.indexOf(m[1].toLowerCase());
+  if (monthIdx === -1) return null;
+  const day = parseInt(m[2]);
+  let hour = parseInt(m[4]) % 12;
+  if (/p/i.test(m[6])) hour += 12;
+  const minute = parseInt(m[5]);
+  const tz = DB.eventTimeZone || 'America/New_York';
+  const explicitYear = m[3] ? parseInt(m[3]) : null;
+  if (explicitYear) return zonedTimeToUtc(explicitYear, monthIdx, day, hour, minute, tz);
+
+  const now = new Date();
+  const candidates = [now.getFullYear(), now.getFullYear() + 1, now.getFullYear() - 1]
+    .map(y => zonedTimeToUtc(y, monthIdx, day, hour, minute, tz));
+  return candidates.reduce((best, d) => Math.abs(d - now) < Math.abs(best - now) ? d : best);
+}
+
+// Finds LeekDuck's "Increased Shiny Chance" call-outs — sentences like
+// "You'll have an increased chance of encountering Shiny Pidgey from
+// September 8 at 10:00 a.m. to September 11 at 10:00 a.m. local time."
+// This time-boxed rotation isn't in ScrapedDuck's structured feed at all
+// (confirmed against every file it publishes), so pasting the actual page
+// is the only way to catch it. Only known species names are accepted, and
+// only ones you still need (shiny for it, or something it evolves into,
+// via the same family data the automatic advisor uses) are surfaced.
+// Windows whose end time has already passed are kept (so you can see what
+// you missed) but flagged `expired` and sorted to the bottom.
+function parseShinyChanceWindows(text) {
+  const known = getKnownPokeNames();
+  const results = [];
+  const seen = new Set();
+  const re = /increased chance of encountering Shiny\s+([A-Za-zÀ-ÿ'.\-\s]+?)\s+from\s+(.+?)\s+to\s+(.+?)\s+local time/gi;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const name = m[1].trim();
+    if (!known.has(name) || seen.has(name)) continue;
+    seen.add(name);
+    const reasons = getCatchReasons(name, { eventType: 'community-day' }); // treat as boosted, like the page says
+    if (!reasons) continue; // nothing left to want for this species
+    const fromStr = m[2].trim(), toStr = m[3].trim();
+    const endDate = parseLooseDateTime(toStr);
+    const expired = !!(endDate && endDate.getTime() < Date.now());
+    results.push({ name, sub: `${fromStr} → ${toStr}`, reasons: reasons.reasons, expired });
+  }
+  results.sort((a, b) => (a.expired === b.expired) ? 0 : (a.expired ? 1 : -1));
+  return results;
+}
+
+// Scans arbitrary pasted text for any whole-word occurrence of a known
+// Pokémon name. Deliberately schema-agnostic — it doesn't care where on the
+// page a name appears, so it works regardless of layout, and it can only
+// ever match a real species (unlike the old line-position heuristic, which
+// mistook footer boilerplate and stray numbers for Pokémon names). Note:
+// this only checks for presence within whatever text it's given — callers
+// MUST scope that text to an actual spawn section first (see
+// extractSpawnSectionText), otherwise unrelated species named elsewhere on
+// the page (GO Pass reward tiers, "related events" links, etc.) leak in.
+function extractKnownNamesFromText(text) {
+  const known = getKnownPokeNames();
+  const found = [];
+  known.forEach(name => {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`(^|[^A-Za-z])${escaped}([^A-Za-z]|$)`, 'i');
+    if (re.test(text)) found.push(name);
+  });
+  return found;
+}
+
+// Isolates the actual "wild encounters" block of a pasted LeekDuck page, so
+// name-matching never wanders into unrelated sections — GO Pass reward
+// tiers, "Increased Shiny Chance" call-outs (handled separately), related
+// event links, footer boilerplate, etc. Returns null if no genuine spawn
+// section can be found, which callers should treat as "nothing to show"
+// rather than falling back to scanning the whole page.
+function extractSpawnSectionText(text) {
+  const lower = text.toLowerCase();
+  const startMarkers = ['wild encounters', 'wild pokémon', 'wild pokemon', 'spawns'];
+  let start = -1;
+  startMarkers.forEach(marker => {
+    const idx = lower.indexOf(marker);
+    if (idx !== -1 && (start === -1 || idx < start)) start = idx;
+  });
+  if (start === -1) return null;
+
+  const endMarkers = ['increased shiny chance', 'go pass', 'raids', 'research',
+    'field research', 'timed research', 'special research', 'bonuses',
+    'eggs', 'shop', 'sales', 'rewards'];
+  let end = text.length;
+  endMarkers.forEach(marker => {
+    const idx = lower.indexOf(marker, start + 20);
+    if (idx !== -1 && idx < end) end = idx;
+  });
+  const section = text.slice(start, end).trim();
+  return section.length > 10 ? section : null;
+}
+
+function renderCatchReasonList(title, items) {
+  if (!items.length) return '';
+  return `<div style="margin-bottom:14px;">
+    <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;">${title}</div>
+    ${items.map(h => `
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);${h.expired ? 'opacity:0.45;' : ''}">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);${h.expired ? 'text-decoration:line-through;' : ''}">${h.name}${h.expired ? ' <span style="font-size:10px;font-weight:400;color:var(--text3);text-decoration:none;">missed</span>' : ''}</div>
+          ${h.sub ? `<div style="font-size:11px;color:var(--text3);margin-top:2px;${h.expired ? 'text-decoration:line-through;' : ''}">${h.sub}</div>` : ''}
+          <div style="font-size:11px;color:${h.expired ? 'var(--text3)' : 'var(--gold)'};margin-top:3px;">${h.reasons.map(r=>r.label).join(' · ')}</div>
+        </div>
+      </div>`).join('')}
+  </div>`;
+}
+
 function parseSpawnPage(text) {
   const resultsEl = document.getElementById('spawn-results');
   if (!text || text.length < 200) { resultsEl.innerHTML = ''; return; }
-  const parsed = parseLeekDuckText(text);
-  if (!parsed) { resultsEl.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px 0;">Could not parse. Paste a full LeekDuck event page.</div>'; return; }
-  const { eventName, endStr, spawns } = parsed;
-  if (!spawns.length) {
-    resultsEl.innerHTML = `<div style="color:var(--text3);font-size:12px;padding:8px 0;">No wild spawns found. Try including the Spawns section of the page.</div>`;
+
+  const shinyHits = parseShinyChanceWindows(text);
+  const shinyNames = new Set(shinyHits.map(h => h.name));
+
+  // Everything else recognizable in the page that's still worth catching —
+  // missing from dex, need Lucky, or feeds a tracked attacker's candy/XL need.
+  // (Shiny reasons are handled above, from the explicit boosted-window text —
+  // we don't guess shiny availability for a plain name mention.)
+  // Scoped to the actual spawn section only — never the whole page — so
+  // GO Pass reward tiers, related-event links, etc. can't leak in as if
+  // they were wild spawns.
+  const spawnSection = extractSpawnSectionText(text);
+  const generalHits = spawnSection ? extractKnownNamesFromText(spawnSection)
+    .filter(n => !shinyNames.has(n))
+    .map(n => { const r = getCatchReasons(n, { eventType: 'event' }); return r ? { name: n, sub: '', reasons: r.reasons } : null; })
+    .filter(Boolean)
+    .sort((a, b) => {
+      const ai = CATCH_REASON_ORDER.findIndex(t => a.reasons.some(r => r.tag === t));
+      const bi = CATCH_REASON_ORDER.findIndex(t => b.reasons.some(r => r.tag === t));
+      return ai - bi;
+    }) : [];
+
+  if (!shinyHits.length && !generalHits.length) {
+    resultsEl.innerHTML = `<div style="color:var(--text3);font-size:12px;padding:8px 0;">No recognizable Pokémon found that you still need. Try pasting the full event page (Ctrl+A on the page, then Ctrl+C).</div>`;
     return;
   }
-  const spawnSet = new Set(spawns.map(s => s.toLowerCase()));
-  const matches = [];
-  ATTACKERS.forEach(atk => {
-    const candyFrom = ATK_CANDY_FROM[atk.key] || [];
-    const hit = candyFrom.filter(p => spawnSet.has(p.toLowerCase()));
-    if (!hit.length) return;
-    const copies = DB.attackers?.[atk.key] || [];
-    const { priority, bestIv, maxLevel } = getAdvisorPriority(atk, copies);
-    matches.push({ atk, hit, copies, priority, bestIv, maxLevel });
-  });
-  if (!matches.length) {
-    resultsEl.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-top:8px;"><b>${eventName}</b><br>Spawns: ${spawns.slice(0,8).join(', ')}<br>None match your tracked attackers.</div>`;
-    return;
-  }
-  const ORDER = { catch:0, upgrade:1, candy:2, xl:3, covered:4 };
-  matches.sort((a,b) => ORDER[a.priority] - ORDER[b.priority]);
-  const pColor = { catch:'var(--green)', upgrade:'var(--gold)', candy:'var(--blue)', xl:'var(--purple)', covered:'var(--text3)' };
-  const pLabel = { catch:'🎯 Get one', upgrade:'⬆️ Better IV available', candy:'🍬 Farm candy', xl:'💎 Farm XL candy', covered:'✅ Covered' };
-  const tierColor = t => t==='S+'?'#ff4444':t==='S'?'var(--red)':t==='A+'?'var(--orange)':t==='A'?'var(--gold)':'var(--blue)';
-  const tierBg    = t => t==='S+'?'rgba(244,91,91,0.2)':t==='S'?'var(--red-bg)':t==='A+'?'var(--orange-bg)':t==='A'?'var(--gold-bg)':'var(--blue-bg)';
-  resultsEl.innerHTML = `
-    <div style="margin-top:10px;">
-      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:2px;">${eventName}</div>
-      ${endStr ? `<div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Ends: ${endStr}</div>` : ''}
-      <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">Wild spawns found: ${spawns.slice(0,10).join(', ')}${spawns.length>10?` +${spawns.length-10} more`:''}</div>
-      ${matches.map(m=>`
-        <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:13px;font-weight:600;color:var(--text);">${m.atk.name}</div>
-            <div style="font-size:10px;font-weight:700;color:${pColor[m.priority]};margin-top:2px;">${pLabel[m.priority]}</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:2px;">
-              Catch <b>${m.hit.join(', ')}</b> for candy
-              ${m.maxLevel?` · Lvl ${m.maxLevel}${m.bestIv!==null?', '+m.bestIv+'% IV':''}`:m.copies.length?' · Owned':'  · Not owned yet'}
-            </div>
-          </div>
-          <span class="badge" style="flex-shrink:0;font-size:10px;background:${tierBg(m.atk.tier)};color:${tierColor(m.atk.tier)};">${m.atk.tier}</span>
-        </div>`).join('')}
-      <div style="font-size:10px;color:var(--text3);margin-top:8px;text-align:right;">Source: LeekDuck</div>
-    </div>`;
+
+  resultsEl.innerHTML =
+    renderCatchReasonList('✨ Increased Shiny Chance windows', shinyHits) +
+    renderCatchReasonList('🍬 Other Pokémon worth catching', generalHits) +
+    `<div style="font-size:10px;color:var(--text3);text-align:right;">Source: LeekDuck</div>`;
 }
 
 // Maps raid boss name → base species for grouping in analytics
@@ -5882,6 +6294,9 @@ function renderDashboard() {
       <button class="dash-quick-btn" onclick="openModal('modal-journal')"><span class="icon">✏️</span> Add note</button>
     </div>
 
+    <!-- Living dex goals -->
+    <div class="card" id="dash-kanto-lucky-goal" style="margin-bottom:14px;"></div>
+
     <!-- Stats row -->
     <div class="dash-section-label">Trainer</div>
     <div class="dash-grid-3" style="margin-bottom:14px;">
@@ -5942,6 +6357,16 @@ function renderDashboard() {
     </div>
     <div id="raid-advisor" style="margin-bottom:14px;"></div>
 
+    <!-- Event Catch Advisor -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div class="dash-section-label" style="margin-bottom:0;">🎣 Wild spawn events with Pokémon you need <span style="font-weight:400;color:var(--text3);font-size:11px;">— run your alt during these</span></div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span style="font-size:10px;color:var(--text3);">via LeekDuck · ScrapedDuck</span>
+        <button class="btn sm" onclick="loadEventCatchAdvisor(true)">↻</button>
+      </div>
+    </div>
+    <div id="event-catch-advisor" style="margin-bottom:14px;"></div>
+
     <!-- Recent journal feed -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
       <div class="dash-section-label" style="margin-bottom:0;">Recent highlights</div>
@@ -5958,8 +6383,10 @@ function renderDashboard() {
         </div>`).join('') : `<div style="color:var(--text3);font-size:13px;">Log raids, XP snapshots, and events to see highlights here.</div>`}
     </div>
   `;
+  LIVING_GOALS.forEach(g => renderLivingGoalCard(g, 'dash-kanto-lucky-goal'));
   // Load raid advisor async after render
   loadRaidAdvisor();
+  loadEventCatchAdvisor();
 }
 
 
