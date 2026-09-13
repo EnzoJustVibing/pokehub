@@ -36,49 +36,65 @@
   --orange-bg: rgba(251,146,60,0.1);
   --radius: 10px;
   --radius-lg: 14px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md: 0 6px 20px rgba(0,0,0,0.35);
+  --shadow-lg: 0 12px 36px rgba(0,0,0,0.45);
+  --brand: linear-gradient(135deg, var(--blue) 0%, var(--purple) 100%);
+  --brand-gold: linear-gradient(135deg, var(--gold) 0%, var(--orange) 100%);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background:
+    radial-gradient(1200px 500px at 15% -10%, rgba(79,142,247,0.08), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(167,139,250,0.06), transparent 55%),
+    var(--bg);
+  background-attachment: fixed;
+  color: var(--text); font-size: 14px; letter-spacing: 0.1px;
+}
 
 /* NAV */
-.app-nav { display: flex; align-items: center; gap: 2px; padding: 10px 12px; background: var(--bg2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; overflow-x: auto; }
+.app-nav { display: flex; align-items: center; gap: 2px; padding: 10px 12px; background: rgba(24,28,39,0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); position: sticky; top: 0; z-index: 50; overflow-x: auto; }
 .app-nav::-webkit-scrollbar { display: none; }
-.nav-logo { font-size: 16px; font-weight: 700; color: var(--text); margin-right: 12px; white-space: nowrap; letter-spacing: -0.3px; }
-.nav-logo span { color: var(--gold); }
-.nav-btn { padding: 6px 14px; border-radius: 99px; border: 1px solid transparent; background: transparent; color: var(--text2); font-size: 13px; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
+.nav-logo { font-size: 16px; font-weight: 800; color: var(--text); margin-right: 12px; white-space: nowrap; letter-spacing: -0.4px; }
+.nav-logo span { background: var(--brand-gold); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.nav-btn { position: relative; padding: 6px 14px; border-radius: 99px; border: 1px solid transparent; background: transparent; color: var(--text2); font-size: 13px; cursor: pointer; white-space: nowrap; transition: color 0.15s, background 0.15s; }
 .nav-btn:hover { color: var(--text); background: var(--bg3); }
-.nav-btn.active { background: var(--blue-bg); color: var(--blue); border-color: rgba(79,142,247,0.3); }
+.nav-btn.active { background: var(--blue-bg); color: var(--blue); border-color: rgba(79,142,247,0.3); box-shadow: inset 0 0 0 1px rgba(79,142,247,0.15); }
 
 /* PAGES */
 .page { display: none; padding: 16px; max-width: 1100px; margin: 0 auto; }
-.page.active { display: block; }
+.page.active { display: block; animation: pageIn 0.2s ease; }
+@keyframes pageIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
 /* SECTION HEADER */
 .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
-.section-title { font-size: 18px; font-weight: 600; color: var(--text); }
+.section-title { font-size: 19px; font-weight: 700; color: var(--text); letter-spacing: -0.2px; }
 .section-subtitle { font-size: 13px; color: var(--text2); margin-top: 2px; }
 
 /* BUTTONS */
-.btn { padding: 7px 14px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg3); color: var(--text); font-size: 13px; cursor: pointer; transition: all 0.15s; }
-.btn:hover { background: var(--bg4); border-color: var(--border2); }
-.btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
-.btn.primary:hover { opacity: 0.9; }
+.btn { padding: 7px 14px; border-radius: var(--radius); border: 1px solid var(--border2); background: var(--bg3); color: var(--text); font-size: 13px; cursor: pointer; transition: transform 0.12s, background 0.15s, box-shadow 0.15s; box-shadow: var(--shadow-sm); }
+.btn:hover { background: var(--bg4); border-color: var(--border2); transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn.primary { background: var(--brand); border-color: transparent; color: #fff; box-shadow: 0 4px 14px rgba(79,142,247,0.35); }
+.btn.primary:hover { opacity: 0.92; box-shadow: 0 6px 18px rgba(79,142,247,0.45); }
 .btn.danger { background: var(--red-bg); border-color: rgba(244,91,91,0.3); color: var(--red); }
 .btn.sm { padding: 4px 10px; font-size: 12px; }
 .btn.gold { background: var(--gold-bg); border-color: rgba(245,166,35,0.3); color: var(--gold); }
 .btn.green { background: var(--green-bg); border-color: rgba(62,207,110,0.3); color: var(--green); }
 
 /* CARDS */
-.card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; }
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow-sm); }
 .card + .card { margin-top: 12px; }
 
 /* STATS ROW */
 .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 16px; }
-.stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
-.stat-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-.stat-value { font-size: 22px; font-weight: 600; color: var(--text); line-height: 1; }
+.stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow-sm); transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s; }
+.stat-card:hover { transform: translateY(-2px); border-color: var(--border2); box-shadow: var(--shadow-md); }
+.stat-label { font-size: 10.5px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 5px; font-weight: 600; }
+.stat-value { font-size: 24px; font-weight: 700; color: var(--text); line-height: 1; letter-spacing: -0.3px; }
 .stat-value.blue { color: var(--blue); }
 .stat-value.gold { color: var(--gold); }
 .stat-value.green { color: var(--green); }
@@ -86,46 +102,49 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
 /* DEX TABS */
 .dex-tabs { display: flex; gap: 4px; margin-bottom: 14px; flex-wrap: wrap; }
-.dex-tab { padding: 6px 14px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--text2); font-size: 12px; cursor: pointer; }
-.dex-tab.active { background: var(--bg3); color: var(--text); border-color: var(--border2); }
+.dex-tab { padding: 6px 14px; border-radius: 99px; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+.dex-tab:hover { border-color: var(--border2); color: var(--text); }
+.dex-tab.active { background: var(--brand); color: #fff; border-color: transparent; box-shadow: 0 3px 10px rgba(79,142,247,0.3); }
 
 /* CONTROLS */
 .controls-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
-.search-input { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 7px 12px; color: var(--text); font-size: 13px; min-width: 160px; flex: 1; max-width: 280px; }
-.search-input:focus { outline: none; border-color: var(--border2); }
-.filter-pill { padding: 5px 12px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--text2); font-size: 12px; cursor: pointer; }
-.filter-pill.active { background: var(--blue-bg); color: var(--blue); border-color: rgba(79,142,247,0.3); }
+.search-input { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 7px 12px; color: var(--text); font-size: 13px; min-width: 160px; flex: 1; max-width: 280px; transition: border-color 0.15s; }
+.search-input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(79,142,247,0.15); }
+.filter-pill { padding: 5px 12px; border-radius: 99px; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); font-size: 12px; cursor: pointer; transition: all 0.15s; }
+.filter-pill:hover { border-color: var(--border2); color: var(--text); }
+.filter-pill.active { background: var(--blue-bg); color: var(--blue); border-color: rgba(79,142,247,0.35); box-shadow: inset 0 0 0 1px rgba(79,142,247,0.15); }
 
 /* GEN FILTER */
 .gen-row { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; }
-.gen-pill { padding: 4px 10px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--text3); font-size: 11px; cursor: pointer; }
-.gen-pill.active { background: var(--bg3); color: var(--text2); border-color: var(--border2); }
+.gen-pill { padding: 4px 10px; border-radius: 99px; border: 1px solid var(--border); background: transparent; color: var(--text3); font-size: 11px; cursor: pointer; transition: all 0.15s; }
+.gen-pill:hover { color: var(--text2); border-color: var(--border2); }
+.gen-pill.active { background: var(--bg4); color: var(--text); border-color: var(--border2); }
 
 /* BULK BAR */
 .bulk-bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding: 10px 12px; background: var(--bg3); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 12px; }
 .bulk-label { font-size: 12px; color: var(--text2); margin-right: 4px; }
 
 /* POKEMON GRID */
-.poke-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
-.poke-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 4px 6px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; transition: border-color 0.1s, background 0.1s; user-select: none; position: relative; }
-.poke-card:hover { border-color: var(--border2); background: var(--bg3); }
-.poke-card.state-1 { background: var(--blue-bg); border-color: rgba(79,142,247,0.35); }
-.poke-card.state-2 { background: var(--gold-bg); border-color: rgba(245,166,35,0.4); }
-.poke-card.state-3 { background: linear-gradient(135deg, var(--blue-bg) 50%, var(--gold-bg) 50%); border-color: rgba(245,166,35,0.4); }
-.poke-img { width: 52px; height: 52px; image-rendering: pixelated; }
-.poke-num { font-size: 10px; color: var(--text3); }
-.poke-name { font-size: 10px; color: var(--text2); text-align: center; line-height: 1.2; }
+.poke-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
+.poke-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 9px 4px 7px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; transition: border-color 0.15s, background 0.15s, transform 0.15s, box-shadow 0.15s; user-select: none; position: relative; box-shadow: var(--shadow-sm); }
+.poke-card:hover { border-color: var(--border2); background: var(--bg3); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.poke-card.state-1 { background: var(--blue-bg); border-color: rgba(79,142,247,0.4); box-shadow: var(--shadow-sm), 0 0 0 1px rgba(79,142,247,0.12); }
+.poke-card.state-2 { background: var(--gold-bg); border-color: rgba(245,166,35,0.45); box-shadow: var(--shadow-sm), 0 0 0 1px rgba(245,166,35,0.12); }
+.poke-card.state-3 { background: linear-gradient(135deg, var(--blue-bg) 50%, var(--gold-bg) 50%); border-color: rgba(245,166,35,0.45); box-shadow: var(--shadow-sm), 0 0 0 1px rgba(245,166,35,0.14); }
+.poke-img { width: 52px; height: 52px; image-rendering: pixelated; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
+.poke-num { font-size: 10px; color: var(--text3); font-weight: 500; }
+.poke-name { font-size: 10px; color: var(--text2); text-align: center; line-height: 1.2; font-weight: 500; }
 .poke-dots { display: flex; gap: 5px; justify-content: center; margin-top: 3px; flex-wrap: wrap; }
-.poke-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--bg4); border: 1px solid var(--border2); flex-shrink: 0; cursor: pointer; transition: transform 0.1s; }
-.poke-dot:hover { transform: scale(1.4); border-color: var(--text2); }
-.poke-dot.on { border-color: transparent; }
-.poke-dot.blue { background: var(--blue); }
-.poke-dot.gold { background: var(--gold); }
-.poke-dot.green { background: var(--green); }
-.poke-dot.purple { background: var(--purple); }
-.poke-dot.teal { background: var(--teal); }
-.poke-dot.orange { background: var(--orange); }
-.poke-dot.red { background: var(--red); }
+.poke-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--bg4); border: 1px solid var(--border2); flex-shrink: 0; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+.poke-dot:hover { transform: scale(1.5); border-color: var(--text2); }
+.poke-dot.on { border-color: transparent; box-shadow: 0 0 6px -1px currentColor; }
+.poke-dot.blue { background: var(--blue); color: var(--blue); }
+.poke-dot.gold { background: var(--gold); color: var(--gold); }
+.poke-dot.green { background: var(--green); color: var(--green); }
+.poke-dot.purple { background: var(--purple); color: var(--purple); }
+.poke-dot.teal { background: var(--teal); color: var(--teal); }
+.poke-dot.orange { background: var(--orange); color: var(--orange); }
+.poke-dot.red { background: var(--red); color: var(--red); }
 
 /* ATTR DOTS legend colors */
 .attr-color-0 { background: var(--blue); }
@@ -176,8 +195,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .badge.purple { background: var(--purple-bg); color: var(--purple); }
 
 /* XP BAR */
-.xp-bar-wrap { background: var(--bg3); border-radius: 99px; height: 10px; overflow: hidden; margin: 8px 0; }
-.xp-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--blue), var(--purple)); transition: width 0.4s; }
+.xp-bar-wrap { background: var(--bg3); border-radius: 99px; height: 10px; overflow: hidden; margin: 8px 0; box-shadow: inset 0 1px 3px rgba(0,0,0,0.3); }
+.xp-bar-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--blue), var(--purple)); transition: width 0.5s ease; box-shadow: 0 0 8px -1px rgba(79,142,247,0.6); }
 
 /* PROGRESS CIRCLE placeholder */
 .xp-big { font-size: 48px; font-weight: 700; color: var(--blue); line-height: 1; }
@@ -315,7 +334,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .confirm-pop-btns { display:flex; gap:6px; }
 
 /* RAID ADVISOR */
-.advisor-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px; margin-bottom:8px; display:flex; gap:12px; align-items:flex-start; }
+.advisor-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px; margin-bottom:8px; display:flex; gap:12px; align-items:flex-start; box-shadow:var(--shadow-sm); transition:transform 0.15s, box-shadow 0.15s; }
+.advisor-card:hover { transform:translateY(-1px); box-shadow:var(--shadow-md); }
 .advisor-card.priority-catch   { border-left:3px solid var(--green);  background:var(--green-bg);  }
 .advisor-card.priority-upgrade { border-left:3px solid var(--gold);   background:var(--gold-bg);   }
 .advisor-card.priority-candy   { border-left:3px solid var(--blue);   background:var(--blue-bg);   }
@@ -330,21 +350,29 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .advisor-loading { text-align:center; color:var(--text3); font-size:12px; padding:12px; }
 
 /* DASHBOARD */
+#page-home { max-width: 1400px; }
+.dash-layout { display:grid; grid-template-columns: 1fr 380px; gap:24px; align-items:start; }
+.dash-main { min-width:0; }
+.dash-side { min-width:0; position:sticky; top:76px; }
+@media (max-width:960px) { .dash-layout { grid-template-columns: 1fr; } .dash-side { position:static; } }
 .dash-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
 .dash-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:14px; }
-.dash-hero { background:linear-gradient(135deg,var(--bg2) 0%,var(--bg3) 100%); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; margin-bottom:14px; }
-.dash-hero-level { font-size:48px; font-weight:800; color:var(--blue); line-height:1; }
-.dash-hero-name { font-size:13px; color:var(--text3); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px; }
+.dash-hero { position:relative; overflow:hidden; background:linear-gradient(135deg,var(--bg2) 0%,var(--bg3) 100%); border:1px solid var(--border); border-radius:var(--radius-lg); padding:22px; margin-bottom:14px; box-shadow:var(--shadow-md); }
+.dash-hero::before { content:''; position:absolute; top:-60%; right:-15%; width:320px; height:320px; border-radius:50%; background:radial-gradient(circle, rgba(79,142,247,0.25), transparent 70%); pointer-events:none; }
+.dash-hero > * { position:relative; }
+.dash-hero-level { font-size:52px; font-weight:800; line-height:1; background:var(--brand); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.dash-hero-name { font-size:12px; color:var(--text3); text-transform:uppercase; letter-spacing:1px; font-weight:600; margin-bottom:4px; }
 .dash-section-label { font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:1px; margin-bottom:10px; margin-top:4px; }
-.dash-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px; }
-.dash-card-label { font-size:11px; color:var(--text3); margin-bottom:4px; }
-.dash-card-val { font-size:22px; font-weight:700; color:var(--text); line-height:1.1; }
+.dash-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px; box-shadow:var(--shadow-sm); transition:transform 0.15s, box-shadow 0.15s, border-color 0.15s; }
+.dash-card[onclick]:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); border-color:var(--border2); }
+.dash-card-label { font-size:11px; color:var(--text3); margin-bottom:4px; font-weight:600; letter-spacing:0.2px; }
+.dash-card-val { font-size:23px; font-weight:700; color:var(--text); line-height:1.1; letter-spacing:-0.3px; }
 .dash-card-sub { font-size:11px; color:var(--text3); margin-top:4px; }
 .dash-card-sub .up { color:var(--green); }
 .dash-card-sub .down { color:var(--red); }
 .dash-quick-btns { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
-.dash-quick-btn { display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:var(--radius); border:1px solid var(--border); background:var(--bg2); color:var(--text2); font-size:13px; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
-.dash-quick-btn:hover { border-color:var(--blue); color:var(--blue); background:var(--blue-bg); }
+.dash-quick-btn { display:flex; align-items:center; gap:7px; padding:9px 15px; border-radius:var(--radius); border:1px solid var(--border); background:var(--bg2); color:var(--text2); font-size:13px; font-weight:500; cursor:pointer; transition:all 0.15s; white-space:nowrap; box-shadow:var(--shadow-sm); }
+.dash-quick-btn:hover { border-color:var(--blue); color:var(--blue); background:var(--blue-bg); transform:translateY(-1px); box-shadow:var(--shadow-md); }
 .dash-quick-btn .icon { font-size:15px; }
 .dash-feed-entry { display:flex; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); align-items:flex-start; }
 .dash-feed-entry:last-child { border-bottom:none; }
@@ -352,7 +380,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .dash-feed-text { flex:1; min-width:0; }
 .dash-feed-title { font-size:13px; color:var(--text); line-height:1.3; }
 .dash-feed-meta { font-size:11px; color:var(--text3); margin-top:2px; }
-.dash-alert { display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:var(--radius); background:var(--blue-bg); border:1px solid rgba(79,142,247,0.25); font-size:12px; color:var(--text2); margin-bottom:8px; }
+.dash-alert { display:flex; align-items:center; gap:10px; padding:11px 14px; border-radius:var(--radius); background:var(--blue-bg); border:1px solid rgba(79,142,247,0.25); border-left:3px solid var(--blue); font-size:12.5px; color:var(--text2); margin-bottom:8px; box-shadow:var(--shadow-sm); transition:transform 0.15s, box-shadow 0.15s; }
+.dash-alert:hover { transform:translateY(-1px); box-shadow:var(--shadow-md); }
 .dash-alert .dash-alert-icon { font-size:16px; flex-shrink:0; }
 @media(max-width:600px){ .dash-grid,.dash-grid-3{ grid-template-columns:1fr 1fr; } }
 @media(max-width:400px){ .dash-grid,.dash-grid-3{ grid-template-columns:1fr; } }
@@ -6266,121 +6295,121 @@ function renderDashboard() {
         <span>${a.text}</span>
       </div>`).join('') : ''}
 
-    <!-- Hero: Level block -->
-    <div class="dash-hero" style="margin-bottom:14px;">
-      <div style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
-        <div>
-          <div class="dash-hero-name">Trainer level</div>
-          <div class="dash-hero-level">${level}</div>
-          ${daysToNext ? `<div style="font-size:13px;color:var(--text2);margin-top:4px;">Level ${level+1} in <span style="color:var(--gold);font-weight:600;">~${daysToNext} day${daysToNext===1?'':'s'}</span></div>` : xpToNext ? `<div style="font-size:13px;color:var(--text2);margin-top:4px;">${xpToNext.toLocaleString()} XP to level ${level+1}</div>` : ''}
-        </div>
-        <div style="text-align:right;">
-          ${dailyAvg ? `<div style="font-size:22px;font-weight:700;color:var(--green);">${dailyAvg.toLocaleString()}</div><div style="font-size:11px;color:var(--text3);">XP / day avg</div>` : ''}
-        </div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:6px;">
-        <span>Level ${level} → ${level+1}</span>
-        <span>${pct}%</span>
-      </div>
-      <div class="xp-bar-wrap"><div class="xp-bar-fill" style="width:${pct}%"></div></div>
-      <div style="font-size:11px;color:var(--text3);margin-top:4px;">${inLvl.toLocaleString()} / ${lvlRange.toLocaleString()} XP</div>
-    </div>
+    <div class="dash-layout">
+      <div class="dash-main">
 
-    <!-- Quick log buttons -->
-    <div class="dash-quick-btns">
-      <button class="dash-quick-btn" onclick="openModal('modal-xp-set')"><span class="icon">⭐</span> Update stats</button>
-      <button class="dash-quick-btn" onclick="openModal('modal-raid')"><span class="icon">⚔️</span> Log raid</button>
-      <button class="dash-quick-btn" onclick="openModal('modal-event')"><span class="icon">📅</span> Log event</button>
-      <button class="dash-quick-btn" onclick="openModal('modal-journal')"><span class="icon">✏️</span> Add note</button>
-    </div>
-
-    <!-- Living dex goals -->
-    <div class="card" id="dash-kanto-lucky-goal" style="margin-bottom:14px;"></div>
-
-    <!-- Stats row -->
-    <div class="dash-section-label">Trainer</div>
-    <div class="dash-grid-3" style="margin-bottom:14px;">
-      <div class="dash-card" onclick="showPage('xp')" style="cursor:pointer;">
-        <div class="dash-card-label">Total XP</div>
-        <div class="dash-card-val" style="font-size:18px;">${totalXP.toLocaleString()}</div>
-        <div class="dash-card-sub">${latestSnap ? latestSnap.date : 'No data'}</div>
-      </div>
-      ${latestCaught !== null ? `<div class="dash-card" onclick="showPage('xp')" style="cursor:pointer;">
-        <div class="dash-card-label">Pokémon caught</div>
-        <div class="dash-card-val">${latestCaught.toLocaleString()}</div>
-      </div>` : ''}
-      ${latestStops !== null ? `<div class="dash-card" onclick="showPage('xp')" style="cursor:pointer;">
-        <div class="dash-card-label">PokéStops visited</div>
-        <div class="dash-card-val">${latestStops.toLocaleString()}</div>
-      </div>` : ''}
-    </div>
-
-    <!-- Spending + Raids row -->
-    <div class="dash-section-label">Spending & Raids</div>
-    <div class="dash-grid" style="margin-bottom:14px;">
-      <div class="dash-card" onclick="showPage('spending')" style="cursor:pointer;">
-        <div class="dash-card-label">Coin balance · ${MAIN_ACCOUNT}</div>
-        <div class="dash-card-val" style="color:${coinBalance < 100 ? 'var(--red)' : 'var(--gold)'};">${coinBalance.toLocaleString()}</div>
-        <div class="dash-card-sub">$${totalUSD.toFixed(2)} spent on gift cards</div>
-      </div>
-      <div class="dash-card" onclick="showPage('raids')" style="cursor:pointer;">
-        <div class="dash-card-label">Raids logged</div>
-        <div class="dash-card-val">${allRaids.length.toLocaleString()}</div>
-        <div class="dash-card-sub"><span class="up">★ ${totalShinies} shine${totalShinies!==1?'s':''}</span></div>
-      </div>
-    </div>
-
-    <!-- Recent event -->
-    ${recentEvent ? `
-    <div class="dash-section-label">Latest event</div>
-    <div class="dash-card" onclick="showPage('events')" style="cursor:pointer;margin-bottom:14px;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
-        <div>
-          <div style="font-size:14px;font-weight:600;color:var(--text);">${recentEvent.name}</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:2px;">${recentEvent.date}${recentEvent.type ? ' · '+recentEvent.type : ''}</div>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-          ${recentEvent.shinies ? `<span class="badge gold">★ ${recentEvent.shinies}</span>` : ''}
-          ${recentEvent.caught  ? `<span class="badge blue">● ${recentEvent.caught}</span>` : ''}
-          ${recentEvent.xp     ? `<span class="badge purple">+${recentEvent.xp.toLocaleString()} XP</span>` : ''}
-        </div>
-      </div>
-    </div>` : ''}
-
-    <!-- Raid Advisor -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-      <div class="dash-section-label" style="margin-bottom:0;">⚔️ Raid priorities right now</div>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <span id="advisor-credit" style="font-size:10px;color:var(--text3);">via LeekDuck · ScrapedDuck</span>
-        <button class="btn sm" onclick="loadRaidAdvisor(true)">↻</button>
-      </div>
-    </div>
-    <div id="raid-advisor" style="margin-bottom:14px;"></div>
-
-    <!-- Event Catch Advisor -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-      <div class="dash-section-label" style="margin-bottom:0;">🎣 Wild spawn events with Pokémon you need <span style="font-weight:400;color:var(--text3);font-size:11px;">— run your alt during these</span></div>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <span style="font-size:10px;color:var(--text3);">via LeekDuck · ScrapedDuck</span>
-        <button class="btn sm" onclick="loadEventCatchAdvisor(true)">↻</button>
-      </div>
-    </div>
-    <div id="event-catch-advisor" style="margin-bottom:14px;"></div>
-
-    <!-- Recent journal feed -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-      <div class="dash-section-label" style="margin-bottom:0;">Recent highlights</div>
-      <button class="btn sm" onclick="showPage('journal')" style="font-size:11px;">View all</button>
-    </div>
-    <div class="dash-card" style="margin-bottom:14px;">
-      ${feedEntries.length ? feedEntries.map(e => `
-        <div class="dash-feed-entry">
-          <div class="dash-feed-icon" style="background:${e.iconBg};color:${e.iconColor};">${e.icon}</div>
-          <div class="dash-feed-text">
-            <div class="dash-feed-title">${e.title}</div>
-            <div class="dash-feed-meta">${e.date}${e.meta ? ' · '+e.meta : ''}</div>
+        <!-- Hero: Level block -->
+        <div class="dash-hero">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+            <div>
+              <div class="dash-hero-name">Trainer level</div>
+              <div class="dash-hero-level">${level}</div>
+              ${daysToNext ? `<div style="font-size:13px;color:var(--text2);margin-top:4px;">Level ${level+1} in <span style="color:var(--gold);font-weight:600;">~${daysToNext} day${daysToNext===1?'':'s'}</span></div>` : xpToNext ? `<div style="font-size:13px;color:var(--text2);margin-top:4px;">${xpToNext.toLocaleString()} XP to level ${level+1}</div>` : ''}
+            </div>
+            ${dailyAvg ? `<div style="text-align:right;"><div style="font-size:22px;font-weight:700;color:var(--green);">${dailyAvg.toLocaleString()}</div><div style="font-size:11px;color:var(--text3);">XP / day avg</div></div>` : ''}
           </div>
-        </div>`).join('') : `<div style="color:var(--text3);font-size:13px;">Log raids, XP snapshots, and events to see highlights here.</div>`}
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:6px;">
+            <span>Level ${level} → ${level+1}</span>
+            <span>${pct}%</span>
+          </div>
+          <div class="xp-bar-wrap"><div class="xp-bar-fill" style="width:${pct}%"></div></div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px;">${inLvl.toLocaleString()} / ${lvlRange.toLocaleString()} XP</div>
+        </div>
+
+        <!-- Quick log buttons -->
+        <div class="dash-quick-btns">
+          <button class="dash-quick-btn" onclick="openModal('modal-xp-set')"><span class="icon">⭐</span> Update stats</button>
+          <button class="dash-quick-btn" onclick="openModal('modal-raid')"><span class="icon">⚔️</span> Log raid</button>
+          <button class="dash-quick-btn" onclick="openModal('modal-event')"><span class="icon">📅</span> Log event</button>
+          <button class="dash-quick-btn" onclick="openModal('modal-journal')"><span class="icon">✏️</span> Add note</button>
+        </div>
+
+        <!-- Stats row -->
+        <div class="dash-section-label">Trainer</div>
+        <div class="dash-grid-3" style="margin-bottom:18px;">
+          <div class="dash-card" onclick="showPage('xp')" style="cursor:pointer;">
+            <div class="dash-card-label">Total XP</div>
+            <div class="dash-card-val" style="font-size:18px;">${totalXP.toLocaleString()}</div>
+            <div class="dash-card-sub">${latestSnap ? latestSnap.date : 'No data'}</div>
+          </div>
+          ${latestCaught !== null ? `<div class="dash-card" onclick="showPage('xp')" style="cursor:pointer;">
+            <div class="dash-card-label">Pokémon caught</div>
+            <div class="dash-card-val">${latestCaught.toLocaleString()}</div>
+          </div>` : ''}
+          ${latestStops !== null ? `<div class="dash-card" onclick="showPage('xp')" style="cursor:pointer;">
+            <div class="dash-card-label">PokéStops visited</div>
+            <div class="dash-card-val">${latestStops.toLocaleString()}</div>
+          </div>` : ''}
+        </div>
+
+        <!-- Spending + Raids row -->
+        <div class="dash-section-label">Spending & Raids</div>
+        <div class="dash-grid" style="margin-bottom:18px;">
+          <div class="dash-card" onclick="showPage('spending')" style="cursor:pointer;">
+            <div class="dash-card-label">Coin balance · ${MAIN_ACCOUNT}</div>
+            <div class="dash-card-val" style="color:${coinBalance < 100 ? 'var(--red)' : 'var(--gold)'};">${coinBalance.toLocaleString()}</div>
+            <div class="dash-card-sub">$${totalUSD.toFixed(2)} spent on gift cards</div>
+          </div>
+          <div class="dash-card" onclick="showPage('raids')" style="cursor:pointer;">
+            <div class="dash-card-label">Raids logged</div>
+            <div class="dash-card-val">${allRaids.length.toLocaleString()}</div>
+            <div class="dash-card-sub"><span class="up">★ ${totalShinies} shine${totalShinies!==1?'s':''}</span></div>
+          </div>
+        </div>
+
+        <!-- Recent event -->
+        ${recentEvent ? `
+        <div class="dash-section-label">Latest event</div>
+        <div class="dash-card" onclick="showPage('events')" style="cursor:pointer;margin-bottom:18px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+            <div>
+              <div style="font-size:14px;font-weight:600;color:var(--text);">${recentEvent.name}</div>
+              <div style="font-size:12px;color:var(--text3);margin-top:2px;">${recentEvent.date}${recentEvent.type ? ' · '+recentEvent.type : ''}</div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              ${recentEvent.shinies ? `<span class="badge gold">★ ${recentEvent.shinies}</span>` : ''}
+              ${recentEvent.caught  ? `<span class="badge blue">● ${recentEvent.caught}</span>` : ''}
+              ${recentEvent.xp     ? `<span class="badge purple">+${recentEvent.xp.toLocaleString()} XP</span>` : ''}
+            </div>
+          </div>
+        </div>` : ''}
+
+        <!-- Recent journal feed -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div class="dash-section-label" style="margin-bottom:0;">Recent highlights</div>
+          <button class="btn sm" onclick="showPage('journal')" style="font-size:11px;">View all</button>
+        </div>
+        <div class="dash-card">
+          ${feedEntries.length ? feedEntries.map(e => `
+            <div class="dash-feed-entry">
+              <div class="dash-feed-icon" style="background:${e.iconBg};color:${e.iconColor};">${e.icon}</div>
+              <div class="dash-feed-text">
+                <div class="dash-feed-title">${e.title}</div>
+                <div class="dash-feed-meta">${e.date}${e.meta ? ' · '+e.meta : ''}</div>
+              </div>
+            </div>`).join('') : `<div style="color:var(--text3);font-size:13px;">Log raids, XP snapshots, and events to see highlights here.</div>`}
+        </div>
+      </div>
+
+      <div class="dash-side">
+        <!-- Living dex goals -->
+        <div class="card" id="dash-kanto-lucky-goal" style="margin-bottom:16px;"></div>
+
+        <!-- Raid Advisor -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div class="dash-section-label" style="margin-bottom:0;">⚔️ Raid priorities</div>
+          <button class="btn sm" onclick="loadRaidAdvisor(true)">↻</button>
+        </div>
+        <div id="raid-advisor" style="margin-bottom:16px;"></div>
+
+        <!-- Event Catch Advisor -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div class="dash-section-label" style="margin-bottom:0;">🎣 Wild spawns to catch</div>
+          <button class="btn sm" onclick="loadEventCatchAdvisor(true)">↻</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin:-6px 0 10px;">Run your alt during these — trade the keepers to main.</div>
+        <div id="event-catch-advisor"></div>
+      </div>
     </div>
   `;
   LIVING_GOALS.forEach(g => renderLivingGoalCard(g, 'dash-kanto-lucky-goal'));
